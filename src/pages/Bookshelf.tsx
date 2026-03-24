@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Book, LogOut, Loader2, Folder as FolderIcon } from 'lucide-react';
+import { Book, LogOut, Loader2, Folder as FolderIcon, Download } from 'lucide-react';
 import { useStore } from '../store';
 import { getFolders, DriveFile } from '../lib/drive';
 
@@ -10,6 +10,24 @@ export default function Bookshelf() {
   const [books, setBooks] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    });
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    }
+  };
 
   useEffect(() => {
     if (token && folderId) {
@@ -42,9 +60,20 @@ export default function Bookshelf() {
             <Book className="w-6 h-6 text-blue-600" />
             <h1 className="text-xl font-bold text-gray-900">My Bookshelf</h1>
           </div>
-          <button onClick={() => { logout(); navigate('/'); }} className="p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100">
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {deferredPrompt && (
+              <button 
+                onClick={handleInstallClick}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-full transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Install App
+              </button>
+            )}
+            <button onClick={() => { logout(); navigate('/'); }} className="p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100">
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </header>
 
