@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ChevronLeft, Type, Moon, Sun, Coffee, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Type, Moon, Sun, Coffee, Loader2 } from 'lucide-react';
 import { useStore } from '../store';
 import { getFileContent } from '../lib/drive';
 
@@ -8,22 +8,70 @@ export default function Reader() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { token, logout, fontSize, theme, setFontSize, setTheme } = useStore();
+  const { token, logout, fontSize, theme, setFontSize, setTheme, currentBookChapters, scrollPositions, setScrollPosition } = useStore();
 
   const [content, setContent] = useState('');
   const [isHtmlContent, setIsHtmlContent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showControls, setShowControls] = useState(false);
+  
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const chapterName = location.state?.chapterName || 'Reading';
   const mimeType = location.state?.mimeType || 'text/plain';
+
+  // Find current chapter index for Prev/Next
+  const currentIndex = currentBookChapters.findIndex(c => c.id === id);
+  const prevChapter = currentIndex > 0 ? currentBookChapters[currentIndex - 1] : null;
+  const nextChapter = currentIndex !== -1 && currentIndex < currentBookChapters.length - 1 ? currentBookChapters[currentIndex + 1] : null;
 
   useEffect(() => {
     if (token && id) {
       loadContent();
     }
+    
+    // Save scroll position on unmount
+    return () => {
+      if (id && !loading && !error) {
+        setScrollPosition(id, window.scrollY);
+      }
+    };
   }, [token, id]);
+
+  // Restore scroll position when content is loaded
+  useEffect(() => {
+    if (!loading && !error && id && scrollPositions[id]) {
+      // Small delay to ensure DOM is fully rendered
+      setTimeout(() => {
+        window.scrollTo({ top: scrollPositions[id], behavior: 'instant' });
+      }, 100);
+    } else if (!loading) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [loading, error, id]);
+
+  // Save scroll position periodically while reading
+  useEffect(() => {
+    if (loading || error || !id) return;
+    
+    const handleScroll = () => {
+      setScrollPosition(id, window.scrollY);
+    };
+    
+    // Debounce scroll event
+    let timeoutId: any;
+    const debouncedScroll = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(handleScroll, 1000);
+    };
+
+    window.addEventListener('scroll', debouncedScroll);
+    return () => {
+      window.removeEventListener('scroll', debouncedScroll);
+      clearTimeout(timeoutId);
+    };
+  }, [loading, error, id, setScrollPosition]);
 
   const loadContent = async () => {
     try {
@@ -86,6 +134,41 @@ export default function Reader() {
             ) : (
               <div className="whitespace-pre-wrap font-serif">{content}</div>
             )}
+            
+            {/* Prev/Next Navigation */}
+            <div className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row gap-4 justify-between">
+              {prevChapter ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/read/${prevChapter.id}`, { state: { chapterName: prevChapter.name, mimeType: prevChapter.mimeType } });
+                  }}
+                  className="flex items-center gap-2 px-6 py-4 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex-1 text-left"
+                >
+                  <ChevronLeft className="w-5 h-5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs opacity-60 uppercase tracking-wider font-sans">Previous</div>
+                    <div className="font-medium truncate text-sm mt-1">{prevChapter.name}</div>
+                  </div>
+                </button>
+              ) : <div className="flex-1" />}
+              
+              {nextChapter ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/read/${nextChapter.id}`, { state: { chapterName: nextChapter.name, mimeType: nextChapter.mimeType } });
+                  }}
+                  className="flex items-center gap-2 px-6 py-4 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex-1 text-right justify-end"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs opacity-60 uppercase tracking-wider font-sans">Next</div>
+                    <div className="font-medium truncate text-sm mt-1">{nextChapter.name}</div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 shrink-0" />
+                </button>
+              ) : <div className="flex-1" />}
+            </div>
           </div>
         )}
       </div>

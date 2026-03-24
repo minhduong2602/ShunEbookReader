@@ -8,7 +8,7 @@ export default function Book() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { token, logout } = useStore();
+  const { token, logout, setCurrentBookChapters } = useStore();
   const [chapters, setChapters] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,8 +24,15 @@ export default function Book() {
   const loadChapters = async () => {
     try {
       setLoading(true);
-      const files = await getFiles(token!, id!);
+      let files = await getFiles(token!, id!);
+      
+      // Natural sort by name
+      files.sort((a, b) => {
+        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      });
+      
       setChapters(files);
+      setCurrentBookChapters(files);
     } catch (err: any) {
       if (err.message === 'Unauthorized') {
         logout();
