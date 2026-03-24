@@ -46,7 +46,8 @@ export async function getFileContent(token: string, fileId: string, mimeType: st
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) {
         if (res.status === 401) throw new Error('Unauthorized');
-        throw new Error('Failed to fetch content');
+        if (res.status === 404) throw new Error('File not found');
+        throw new Error(`Failed to fetch content (${res.status})`);
       }
       const content = await res.text();
       const result = { content, isHtml: true };
@@ -68,7 +69,8 @@ export async function getFileContent(token: string, fileId: string, mimeType: st
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) {
       if (res.status === 401) throw new Error('Unauthorized');
-      throw new Error('Failed to fetch content');
+      if (res.status === 404) throw new Error('File not found');
+      throw new Error(`Failed to fetch content (${res.status})`);
     }
 
     const buffer = await res.arrayBuffer();

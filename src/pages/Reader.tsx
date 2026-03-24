@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Type, Moon, Sun, Coffee, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Type, Moon, Sun, Coffee, Loader2, AlertCircle, WifiOff, FileQuestion, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useStore } from '../store';
 import { getFileContent } from '../lib/drive';
 
@@ -120,9 +120,41 @@ export default function Reader() {
             <p>Loading content...</p>
           </div>
         ) : error ? (
-          <div className="text-center py-20 text-red-500">
-            <p>{error}</p>
-            <button onClick={loadContent} className="mt-4 underline">Try Again</button>
+          <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-full mb-4">
+              {error.includes('Failed to fetch') || error.includes('Network') || !navigator.onLine ? (
+                <WifiOff className="w-10 h-10 text-red-500 dark:text-red-400" />
+              ) : error.includes('không được hỗ trợ') || error.includes('not supported') || error.includes('not found') ? (
+                <FileQuestion className="w-10 h-10 text-red-500 dark:text-red-400" />
+              ) : (
+                <AlertCircle className="w-10 h-10 text-red-500 dark:text-red-400" />
+              )}
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Failed to load chapter</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md">
+              {error.includes('Failed to fetch') || error.includes('Network') || !navigator.onLine
+                ? "Network error. Please check your internet connection and try again."
+                : error.includes('not found')
+                ? "This chapter could not be found. It may have been deleted or moved."
+                : error}
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs mx-auto">
+              {!(error.includes('không được hỗ trợ') || error.includes('not supported') || error.includes('not found')) && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); loadContent(); }} 
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors font-medium shadow-sm"
+                >
+                  <RefreshCw className="w-4 h-4" /> Try Again
+                </button>
+              )}
+              <button 
+                onClick={(e) => { e.stopPropagation(); navigate(-1); }} 
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl transition-colors font-medium shadow-sm"
+              >
+                <ArrowLeft className="w-4 h-4" /> Go Back
+              </button>
+            </div>
           </div>
         ) : (
           <div

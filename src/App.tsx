@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from './store';
 import Connect from './pages/Connect';
 import Bookshelf from './pages/Bookshelf';
@@ -16,7 +16,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/" element={<Connect />} />
         <Route path="/bookshelf" element={
@@ -29,6 +29,6 @@ export default function App() {
           <ProtectedRoute><Reader /></ProtectedRoute>
         } />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
