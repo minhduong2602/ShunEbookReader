@@ -11,6 +11,7 @@ export default function Reader() {
   const { token, logout, fontSize, theme, setFontSize, setTheme } = useStore();
 
   const [content, setContent] = useState('');
+  const [isHtmlContent, setIsHtmlContent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showControls, setShowControls] = useState(false);
@@ -27,14 +28,15 @@ export default function Reader() {
   const loadContent = async () => {
     try {
       setLoading(true);
-      const text = await getFileContent(token!, id!, mimeType);
-      setContent(text);
+      const result = await getFileContent(token!, id!, mimeType, chapterName);
+      setContent(result.content);
+      setIsHtmlContent(result.isHtml);
     } catch (err: any) {
       if (err.message === 'Unauthorized') {
         logout();
         navigate('/');
       } else {
-        setError('Failed to load content.');
+        setError(err.message || 'Failed to load content.');
       }
     } finally {
       setLoading(false);
@@ -46,8 +48,6 @@ export default function Reader() {
     dark: 'bg-[#121212] text-gray-300',
     sepia: 'bg-[#F4ECD8] text-[#5B4636]',
   };
-
-  const isHtml = mimeType === 'text/html' || mimeType === 'application/vnd.google-apps.document';
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${themeClasses[theme]}`}>
@@ -81,7 +81,7 @@ export default function Reader() {
             className="prose prose-lg max-w-none dark:prose-invert"
             style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
           >
-            {isHtml ? (
+            {isHtmlContent ? (
               <div dangerouslySetInnerHTML={{ __html: content }} className="reader-html-content" />
             ) : (
               <div className="whitespace-pre-wrap font-serif">{content}</div>

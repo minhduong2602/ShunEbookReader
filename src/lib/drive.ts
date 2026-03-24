@@ -32,22 +32,61 @@ export async function getFiles(token: string, parentId: string): Promise<DriveFi
   return data.files || [];
 }
 
-export async function getFileContent(token: string, fileId: string, mimeType: string): Promise<string> {
+export async function getFileContent(token: string, fileId: string, mimeType: string, fileName: string = ''): Promise<{content: string, isHtml: boolean}> {
   let url = `${DRIVE_API}/files/${fileId}?alt=media`;
 
-  // If it's a Google Doc, export it as HTML
+  // 1. Google Docs
   if (mimeType === 'application/vnd.google-apps.document') {
     url = `${DRIVE_API}/files/${fileId}/export?mimeType=text/html`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) {
+      if (res.status === 401) throw new Error('Unauthorized');
+      throw new Error('Failed to fetch content');
+    }
+    return { content: await res.text(), isHtml: true };
   }
 
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  // Chặn các định dạng binary không hỗ trợ đọc text
+  if (mimeType === 'application/epub+zip' || fileName.endsWith('.epub')) {
+    throw new Error('Định dạng EPUB chưa được hỗ trợ. Vui lòng dùng file TXT, HTML, DOCX hoặc Google Doc.');
+  }
+  if (mimeType === 'application/msword' || fileName.endsWith('.doc')) {
+    throw new Error('Định dạng DOC cũ không được hỗ trợ. Vui lòng lưu thành DOCX hoặc Google Doc.');
+  }
+  if (mimeType === 'application/pdf' || fileName.endsWith('.pdf')) {
+    throw new Error('Định dạng PDF không được hỗ trợ để đọc text.');
+  }
 
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) {
     if (res.status === 401) throw new Error('Unauthorized');
     throw new Error('Failed to fetch content');
   }
 
-  return res.text();
+  const buffer = await res.arrayBuffer();
+
+  // 2. DOCX Files
+  if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || fileName.endsWith('.docx')) {
+    const mammoth = await import('mammoth');
+    const result = await mammoth.convertToHtml({ arrayBuffer: buffer });
+    return { content: result.value, isHtml: true };
+  }
+
+  // 3. Text/HTML Files (with smart encoding detection)
+  let text = '';
+  try {
+    // Thử UTF-8 trước (chuẩn phổ biến nhất)
+    text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+  } catch (e) {
+    try {
+      // Fallback 1: UTF-16LE (hay gặp ở file txt Windows)
+      text = new TextDecoder('utf-16le', { fatal: true }).decode(buffer);
+    } catch (e2) {
+      // Fallback 2: Windows-1258 (Tiếng Việt) hoặc Windows-1252
+      text = new TextDecoder('windows-1258').decode(buffer);
+    }
+  }
+
+  const isHtml = mimeType === 'text/html' || fileName.endsWith('.html');
+  return { content: text, isHtml };
 }
