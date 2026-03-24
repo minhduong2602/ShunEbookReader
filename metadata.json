@@ -1,0 +1,5 @@
+{
+  "name": "Drive Novel Reader",
+  "description": "A mobile-first novel reader that connects to a Google Drive folder as a bookshelf.",
+  "requestFramePermissions": []
+}
