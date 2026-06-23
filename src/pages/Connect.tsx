@@ -12,9 +12,20 @@ export default function Connect() {
 
   useEffect(() => {
     if (token && folderId) {
-      navigate('/bookshelf');
+      navigate('/bookshelf', { replace: true });
     }
   }, [token, folderId, navigate]);
+
+  const isPreConfigured = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID && import.meta.env.VITE_DRIVE_FOLDER_ID);
+  const [hasAttemptedAutoConnect, setHasAttemptedAutoConnect] = useState(false);
+
+  useEffect(() => {
+    if (isPreConfigured && !token && !hasAttemptedAutoConnect && !error) {
+      setHasAttemptedAutoConnect(true);
+      // Optional: Auto-trigger connect if it's completely rigid but standard OAuth needs user action
+      // We will let the user click instead of throwing popup arbitrarily.
+    }
+  }, [isPreConfigured, token, hasAttemptedAutoConnect, error]);
 
   const handleConnect = () => {
     setError('');
@@ -33,7 +44,7 @@ export default function Connect() {
     try {
       const client = (window as any).google.accounts.oauth2.initTokenClient({
         client_id: localClientId,
-        scope: 'https://www.googleapis.com/auth/drive.readonly',
+        scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.appdata',
         callback: (response: any) => {
           if (response.error) {
             setError(response.error_description || 'Failed to authenticate');
@@ -41,7 +52,7 @@ export default function Connect() {
           }
           if (response.access_token) {
             setToken(response.access_token);
-            navigate('/bookshelf');
+            navigate('/bookshelf', { replace: true });
           }
         },
       });
@@ -59,7 +70,9 @@ export default function Connect() {
             <BookOpen className="w-8 h-8 text-blue-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Drive Reader</h1>
-          <p className="text-gray-500 text-sm">Connect your Google Drive folder to start reading</p>
+          <p className="text-gray-500 text-sm">
+            {isPreConfigured ? 'Your app is pre-configured. Click connect to proceed.' : 'Connect your Google Drive folder to start reading'}
+          </p>
         </div>
 
         {error && (
@@ -69,33 +82,37 @@ export default function Connect() {
         )}
 
         <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <Key className="w-4 h-4" /> Google Client ID
-            </label>
-            <input
-              type="text"
-              value={localClientId}
-              onChange={(e) => setLocalClientId(e.target.value)}
-              placeholder="123456789-abc...apps.googleusercontent.com"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-            />
-            <p className="text-xs text-gray-400">Needs 'https://www.googleapis.com/auth/drive.readonly' scope</p>
-          </div>
+          {!isPreConfigured && (
+            <>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Key className="w-4 h-4" /> Google Client ID
+                </label>
+                <input
+                  type="text"
+                  value={localClientId}
+                  onChange={(e) => setLocalClientId(e.target.value)}
+                  placeholder="123456789-abc...apps.googleusercontent.com"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                />
+                <p className="text-xs text-gray-400">Needs 'drive.readonly' and 'drive.appdata' scopes</p>
+              </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <Folder className="w-4 h-4" /> Bookshelf Folder ID
-            </label>
-            <input
-              type="text"
-              value={localFolderId}
-              onChange={(e) => setLocalFolderId(e.target.value)}
-              placeholder="1A2b3C4d5E6f7G8h9I0j"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-            />
-            <p className="text-xs text-gray-400">The ID from your Google Drive folder URL</p>
-          </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Folder className="w-4 h-4" /> Bookshelf Folder ID
+                </label>
+                <input
+                  type="text"
+                  value={localFolderId}
+                  onChange={(e) => setLocalFolderId(e.target.value)}
+                  placeholder="1A2b3C4d5E6f7G8h9I0j"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                />
+                <p className="text-xs text-gray-400">The ID from your Google Drive folder URL</p>
+              </div>
+            </>
+          )}
 
           <button
             onClick={handleConnect}

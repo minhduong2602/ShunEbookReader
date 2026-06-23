@@ -1,6 +1,76 @@
 import { get, set } from 'idb-keyval';
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
+const SYNC_FILE_NAME = 'reader_sync_v1.json';
+
+export async function getSyncState(token: string): Promise<any | null> {
+  try {
+    const q = `name='${SYNC_FILE_NAME}' and spaces='appDataFolder'`;
+    const res = await fetch(`${DRIVE_API}/files?spaces=appDataFolder&q=${encodeURIComponent(q)}&fields=files(id)`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      if (res.status === 401) throw new Error('Unauthorized');
+      return null;
+    }
+    const data = await res.json();
+    if (!data.files || data.files.length === 0) return null;
+
+    const fileId = data.files[0].id;
+    const contentRes = await fetch(`${DRIVE_API}/files/${fileId}?alt=media`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!contentRes.ok) return null;
+    return await contentRes.json();
+  } catch (err) {
+    console.error('Failed to get sync state', err);
+    return null;
+  }
+}
+
+export async function saveSyncState(token: string, state: any): Promise<void> {
+  try {
+    const q = `name='${SYNC_FILE_NAME}' and spaces='appDataFolder'`;
+    const resList = await fetch(`${DRIVE_API}/files?spaces=appDataFolder&q=${encodeURIComponent(q)}&fields=files(id)`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    if (!resList.ok) {
+       if (resList.status === 401) throw new Error('Unauthorized');
+       throw new Error('Failed to list appDataFolder');
+    }
+    
+    const listData = await resList.json();
+    let fileId = null;
+
+    if (listData.files && listData.files.length > 0) {
+      fileId = listData.files[0].id;
+    } else {
+      const createRes = await fetch(`${DRIVE_API}/files`, {
+        method: 'POST',
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ name: SYNC_FILE_NAME, parents: ['appDataFolder'] })
+      });
+      if (!createRes.ok) throw new Error('Failed to create sync file');
+      const createData = await createRes.json();
+      fileId = createData.id;
+    }
+
+    if (!fileId) return;
+
+    const blob = new Blob([JSON.stringify(state)], { type: 'application/json' });
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: blob
+    });
+  } catch (err) {
+    console.error('Failed to save sync state', err);
+  }
+}
 
 export interface DriveFile {
   id: string;

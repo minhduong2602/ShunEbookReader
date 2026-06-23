@@ -180,8 +180,7 @@ export default function Reader() {
       setDetectedChapters(chapters);
     } catch (err: any) {
       if (err.message === 'Unauthorized') {
-        logout();
-        navigate('/');
+        useStore.getState().setSessionExpired(true);
       } else {
         setError(err.message || 'Failed to load content.');
       }
@@ -276,7 +275,7 @@ export default function Reader() {
           </div>
         ) : (
           <div
-            className="prose prose-lg max-w-none dark:prose-invert"
+            className={`prose prose-lg max-w-none dark:prose-invert font-${useStore.getState().fontFamily}`}
             style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
           >
             <MemoizedContent
@@ -327,18 +326,37 @@ export default function Reader() {
       {/* Bottom Controls Overlay */}
       <div className={`fixed bottom-0 inset-x-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.2)] z-50 transition-transform duration-300 pb-safe ${showControls ? 'translate-y-0' : 'translate-y-full'}`}>
         <div className="max-w-3xl mx-auto p-4 space-y-6">
-          {/* Font Size */}
-          <div className="flex items-center gap-4">
-            <Type className="w-5 h-5 opacity-50" />
-            <input
-              type="range"
-              min="12"
-              max="32"
-              value={fontSize}
-              onChange={(e) => setFontSize(Number(e.target.value))}
-              className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
-            />
-            <Type className="w-7 h-7 opacity-80" />
+          
+          {/* Font Controls */}
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-4 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-xl">
+              {[
+                { id: 'sans', label: 'Sans' },
+                { id: 'serif', label: 'Serif' },
+                { id: 'mono', label: 'Mono' }
+              ].map(font => (
+                <button
+                  key={font.id}
+                  onClick={() => useStore.getState().setFontFamily(font.id as any)}
+                  className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${useStore.getState().fontFamily === font.id ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}`}
+                >
+                  <span className={`font-${font.id}`}>{font.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-4 px-2">
+              <span className="text-sm font-medium opacity-50">A</span>
+              <input
+                type="range"
+                min="12"
+                max="32"
+                value={fontSize}
+                onChange={(e) => setFontSize(Number(e.target.value))}
+                className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+              <span className="text-xl font-medium opacity-80">A</span>
+            </div>
           </div>
 
           {/* Theme Selection */}

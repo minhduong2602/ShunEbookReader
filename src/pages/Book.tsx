@@ -8,7 +8,7 @@ export default function Book() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { token, logout, setCurrentBookChapters } = useStore();
+  const { token, logout, setCurrentBookChapters, setSessionExpired } = useStore();
   const [chapters, setChapters] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -35,8 +35,7 @@ export default function Book() {
       setCurrentBookChapters(files);
     } catch (err: any) {
       if (err.message === 'Unauthorized') {
-        logout();
-        navigate('/');
+        setSessionExpired(true);
       } else {
         setError('Failed to load chapters.');
       }

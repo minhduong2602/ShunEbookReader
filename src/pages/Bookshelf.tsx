@@ -6,7 +6,7 @@ import { getFolders, DriveFile } from '../lib/drive';
 
 export default function Bookshelf() {
   const navigate = useNavigate();
-  const { token, folderId, logout } = useStore();
+  const { token, folderId, logout, setSessionExpired, loadSyncFromDrive } = useStore();
   const [books, setBooks] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,6 +32,7 @@ export default function Bookshelf() {
   useEffect(() => {
     if (token && folderId) {
       loadBooks();
+      loadSyncFromDrive().catch(console.error);
     }
   }, [token, folderId]);
 
@@ -42,8 +43,7 @@ export default function Bookshelf() {
       setBooks(folders);
     } catch (err: any) {
       if (err.message === 'Unauthorized') {
-        logout();
-        navigate('/');
+        setSessionExpired(true);
       } else {
         setError('Failed to load bookshelf. Make sure the Folder ID is correct and accessible.');
       }
@@ -70,7 +70,7 @@ export default function Bookshelf() {
                 Install App
               </button>
             )}
-            <button onClick={() => { logout(); navigate('/'); }} className="p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100">
+            <button onClick={() => { logout(); navigate('/', { replace: true }); }} className="p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100">
               <LogOut className="w-5 h-5" />
             </button>
           </div>
