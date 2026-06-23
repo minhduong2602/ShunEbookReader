@@ -286,7 +286,7 @@ export default function Reader() {
           </div>
         ) : (
           <div
-            className={`prose prose-lg max-w-none dark:prose-invert font-${fontFamily}`}
+            className={`prose prose-lg max-w-none dark:prose-invert ${fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans'}`}
             style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
           >
             <MemoizedContent
@@ -342,16 +342,16 @@ export default function Reader() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-4 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-xl">
               {[
-                { id: 'sans', label: 'Sans' },
-                { id: 'serif', label: 'Serif' },
-                { id: 'mono', label: 'Mono' }
+                { id: 'sans', label: 'Sans', fontClass: 'font-sans' },
+                { id: 'serif', label: 'Serif', fontClass: 'font-serif' },
+                { id: 'mono', label: 'Mono', fontClass: 'font-mono' }
               ].map(font => (
                 <button
                   key={font.id}
                   onClick={() => setFontFamily(font.id as any)}
                   className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${fontFamily === font.id ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}`}
                 >
-                  <span className={`font-${font.id}`}>{font.label}</span>
+                  <span className={font.fontClass}>{font.label}</span>
                 </button>
               ))}
             </div>

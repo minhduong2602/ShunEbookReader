@@ -64,16 +64,16 @@ export default function Settings() {
             <label className="text-sm font-medium text-gray-700">Default Font Family</label>
             <div className="flex bg-gray-100 p-1.5 rounded-xl">
               {[
-                { id: 'sans', label: 'Sans' },
-                { id: 'serif', label: 'Serif' },
-                { id: 'mono', label: 'Mono' }
+                { id: 'sans', label: 'Sans', fontClass: 'font-sans' },
+                { id: 'serif', label: 'Serif', fontClass: 'font-serif' },
+                { id: 'mono', label: 'Mono', fontClass: 'font-mono' }
               ].map(font => (
                 <button
                   key={font.id}
                   onClick={() => setFontFamily(font.id as any)}
                   className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${fontFamily === font.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
                 >
-                  <span className={`font-${font.id}`}>{font.label}</span>
+                  <span className={font.fontClass}>{font.label}</span>
                 </button>
               ))}
             </div>
