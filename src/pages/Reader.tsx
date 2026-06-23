@@ -5,6 +5,7 @@ import Mark from 'mark.js';
 import { useStore } from '../store';
 import { getFileContent } from '../lib/drive';
 import { detectChapters, ChapterMarker } from '../lib/chapters';
+import { formatChapterName } from '../lib/utils';
 
 const MemoizedContent = memo(({ 
   isHtmlContent, 
@@ -24,7 +25,7 @@ const MemoizedContent = memo(({
       ) : (
         <div 
           dangerouslySetInnerHTML={{ __html: processedContent || content }} 
-          className="whitespace-pre-wrap font-serif" 
+          className="whitespace-pre-wrap" 
         />
       )}
     </div>
@@ -35,7 +36,7 @@ export default function Reader() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { token, logout, fontSize, theme, setFontSize, setTheme, currentBookChapters, scrollPositions, setScrollPosition, addHighlight, highlights, removeHighlight } = useStore();
+  const { token, logout, fontSize, theme, fontFamily, setFontFamily, setFontSize, setTheme, currentBookChapters, scrollPositions, setScrollPosition, addHighlight, highlights, removeHighlight, updateReadHistory } = useStore();
 
   const [content, setContent] = useState('');
   const [processedContent, setProcessedContent] = useState('');
@@ -55,8 +56,10 @@ export default function Reader() {
 
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const chapterName = location.state?.chapterName || 'Reading';
+  const chapterName = formatChapterName(location.state?.chapterName || 'Reading');
   const mimeType = location.state?.mimeType || 'text/plain';
+  const bookId = location.state?.bookId;
+  const bookName = location.state?.bookName;
 
   // Find current chapter index for Prev/Next
   const currentIndex = currentBookChapters.findIndex(c => c.id === id);
@@ -66,6 +69,14 @@ export default function Reader() {
   useEffect(() => {
     if (token && id) {
       loadContent();
+      if (bookId && bookName) {
+        updateReadHistory({
+          bookId,
+          bookName,
+          lastChapterId: id,
+          lastChapterName: location.state?.chapterName,
+        });
+      }
     }
     
     // Save scroll position on unmount
@@ -154,8 +165,8 @@ export default function Reader() {
             acrossElements: true,
             separateWordSearch: false,
             each: (element) => {
-              element.style.backgroundColor = h.color;
-              element.style.color = '#000'; // Ensure text is readable
+              (element as HTMLElement).style.backgroundColor = h.color;
+              (element as HTMLElement).style.color = '#000'; // Ensure text is readable
             }
           });
         });
@@ -275,7 +286,7 @@ export default function Reader() {
           </div>
         ) : (
           <div
-            className={`prose prose-lg max-w-none dark:prose-invert font-${useStore.getState().fontFamily}`}
+            className={`prose prose-lg max-w-none dark:prose-invert font-${fontFamily}`}
             style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
           >
             <MemoizedContent
@@ -291,14 +302,14 @@ export default function Reader() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(`/read/${prevChapter.id}`, { state: { chapterName: prevChapter.name, mimeType: prevChapter.mimeType } });
+                    navigate(`/read/${prevChapter.id}`, { state: { chapterName: prevChapter.name, mimeType: prevChapter.mimeType, bookId, bookName } });
                   }}
                   className="flex items-center gap-2 px-6 py-4 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex-1 text-left"
                 >
                   <ChevronLeft className="w-5 h-5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="text-xs opacity-60 uppercase tracking-wider font-sans">Previous</div>
-                    <div className="font-medium truncate text-sm mt-1">{prevChapter.name}</div>
+                    <div className="font-medium truncate text-sm mt-1">{formatChapterName(prevChapter.name)}</div>
                   </div>
                 </button>
               ) : <div className="flex-1" />}
@@ -307,13 +318,13 @@ export default function Reader() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(`/read/${nextChapter.id}`, { state: { chapterName: nextChapter.name, mimeType: nextChapter.mimeType } });
+                    navigate(`/read/${nextChapter.id}`, { state: { chapterName: nextChapter.name, mimeType: nextChapter.mimeType, bookId, bookName } });
                   }}
                   className="flex items-center gap-2 px-6 py-4 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex-1 text-right justify-end"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-xs opacity-60 uppercase tracking-wider font-sans">Next</div>
-                    <div className="font-medium truncate text-sm mt-1">{nextChapter.name}</div>
+                    <div className="font-medium truncate text-sm mt-1">{formatChapterName(nextChapter.name)}</div>
                   </div>
                   <ChevronRight className="w-5 h-5 shrink-0" />
                 </button>
@@ -337,8 +348,8 @@ export default function Reader() {
               ].map(font => (
                 <button
                   key={font.id}
-                  onClick={() => useStore.getState().setFontFamily(font.id as any)}
-                  className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${useStore.getState().fontFamily === font.id ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}`}
+                  onClick={() => setFontFamily(font.id as any)}
+                  className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${fontFamily === font.id ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}`}
                 >
                   <span className={`font-${font.id}`}>{font.label}</span>
                 </button>

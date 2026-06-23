@@ -1,10 +1,11 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useStore } from './store';
 import Connect from './pages/Connect';
 import Bookshelf from './pages/Bookshelf';
 import Book from './pages/Book';
 import Reader from './pages/Reader';
+import Settings from './pages/Settings';
 import { Key } from 'lucide-react';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -110,6 +111,9 @@ export default function App() {
         } />
         <Route path="/read/:id" element={
           <ProtectedRoute><Reader /></ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute><Settings /></ProtectedRoute>
         } />
         <Route path="*" element={<Navigate to="/bookshelf" replace />} />
       </Routes>

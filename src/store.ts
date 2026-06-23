@@ -10,6 +10,14 @@ export interface Highlight {
   chapterName: string;
 }
 
+export interface ReadHistoryEntry {
+  bookId: string;
+  bookName: string;
+  lastAccessed: number;
+  lastChapterId?: string;
+  lastChapterName?: string;
+}
+
 interface AppState {
   token: string | null;
   folderId: string | null;
@@ -17,6 +25,8 @@ interface AppState {
   fontSize: number;
   theme: 'light' | 'dark' | 'sepia';
   fontFamily: 'sans' | 'serif' | 'mono';
+  userName: string;
+  readHistory: ReadHistoryEntry[];
   currentBookChapters: DriveFile[];
   scrollPositions: Record<string, number>;
   highlights: Record<string, Highlight[]>;
@@ -29,6 +39,8 @@ interface AppState {
   setFontSize: (size: number) => void;
   setTheme: (theme: 'light' | 'dark' | 'sepia') => void;
   setFontFamily: (font: 'sans' | 'serif' | 'mono') => void;
+  setUserName: (name: string) => void;
+  updateReadHistory: (entry: Pick<ReadHistoryEntry, 'bookId' | 'bookName'> & Partial<ReadHistoryEntry>) => void;
   setCurrentBookChapters: (chapters: DriveFile[]) => void;
   setScrollPosition: (chapterId: string, position: number) => void;
   addHighlight: (chapterId: string, highlight: Highlight) => void;
@@ -46,6 +58,8 @@ export const useStore = create<AppState>((set, get) => ({
   fontSize: Number(localStorage.getItem('reader_font_size')) || 18,
   theme: (localStorage.getItem('reader_theme') as any) || 'light',
   fontFamily: (localStorage.getItem('reader_font_family') as any) || 'sans',
+  userName: localStorage.getItem('reader_user_name') || 'Reader',
+  readHistory: JSON.parse(localStorage.getItem('reader_history') || '[]'),
   currentBookChapters: [],
   scrollPositions: JSON.parse(localStorage.getItem('reader_scroll_positions') || '{}'),
   highlights: JSON.parse(localStorage.getItem('reader_highlights') || '{}'),
@@ -77,6 +91,24 @@ export const useStore = create<AppState>((set, get) => ({
   setFontFamily: (fontFamily) => {
     localStorage.setItem('reader_font_family', fontFamily);
     set({ fontFamily });
+  },
+  setUserName: (userName) => {
+    localStorage.setItem('reader_user_name', userName);
+    set({ userName });
+  },
+  updateReadHistory: (entry) => {
+    set((state) => {
+      let history = [...state.readHistory];
+      const index = history.findIndex(h => h.bookId === entry.bookId);
+      if (index >= 0) {
+        history[index] = { ...history[index], ...entry, lastAccessed: Date.now() };
+      } else {
+        history.unshift({ ...entry, lastAccessed: Date.now() } as ReadHistoryEntry);
+      }
+      history.sort((a, b) => b.lastAccessed - a.lastAccessed);
+      localStorage.setItem('reader_history', JSON.stringify(history));
+      return { readHistory: history };
+    });
   },
   setCurrentBookChapters: (chapters) => {
     set({ currentBookChapters: chapters });
@@ -127,6 +159,8 @@ export const useStore = create<AppState>((set, get) => ({
         if (state.fontSize) localStorage.setItem('reader_font_size', state.fontSize);
         if (state.theme) localStorage.setItem('reader_theme', state.theme);
         if (state.fontFamily) localStorage.setItem('reader_font_family', state.fontFamily);
+        if (state.userName) localStorage.setItem('reader_user_name', state.userName);
+        if (state.readHistory) localStorage.setItem('reader_history', JSON.stringify(state.readHistory));
         
         set({ 
           scrollPositions: mergedScrolls, 
@@ -134,6 +168,8 @@ export const useStore = create<AppState>((set, get) => ({
           ...(state.fontSize ? { fontSize: Number(state.fontSize) } : {}),
           ...(state.theme ? { theme: state.theme } : {}),
           ...(state.fontFamily ? { fontFamily: state.fontFamily } : {}),
+          ...(state.userName ? { userName: state.userName } : {}),
+          ...(state.readHistory ? { readHistory: state.readHistory } : {}),
           lastSyncedAt: Date.now()
         });
       }
@@ -142,7 +178,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
   triggerSyncToDrive: async () => {
-    const { token, scrollPositions, highlights, fontSize, theme, fontFamily } = get();
+    const { token, scrollPositions, highlights, fontSize, theme, fontFamily, userName, readHistory } = get();
     if (!token) return;
     try {
       await saveSyncState(token, {
@@ -151,6 +187,8 @@ export const useStore = create<AppState>((set, get) => ({
         fontSize,
         theme,
         fontFamily,
+        userName,
+        readHistory,
         timestamp: Date.now()
       });
       set({ lastSyncedAt: Date.now() });

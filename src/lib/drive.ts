@@ -5,7 +5,7 @@ const SYNC_FILE_NAME = 'reader_sync_v1.json';
 
 export async function getSyncState(token: string): Promise<any | null> {
   try {
-    const q = `name='${SYNC_FILE_NAME}' and spaces='appDataFolder'`;
+    const q = `name='${SYNC_FILE_NAME}'`;
     const res = await fetch(`${DRIVE_API}/files?spaces=appDataFolder&q=${encodeURIComponent(q)}&fields=files(id)`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -30,14 +30,15 @@ export async function getSyncState(token: string): Promise<any | null> {
 
 export async function saveSyncState(token: string, state: any): Promise<void> {
   try {
-    const q = `name='${SYNC_FILE_NAME}' and spaces='appDataFolder'`;
+    const q = `name='${SYNC_FILE_NAME}'`;
     const resList = await fetch(`${DRIVE_API}/files?spaces=appDataFolder&q=${encodeURIComponent(q)}&fields=files(id)`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     
     if (!resList.ok) {
        if (resList.status === 401) throw new Error('Unauthorized');
-       throw new Error('Failed to list appDataFolder');
+       if (resList.status === 403) throw new Error('Failed to list appDataFolder. You may not have granted the app data folder permission or the Drive API is not enabled.');
+       throw new Error(`Failed to list appDataFolder: ${resList.status} ${resList.statusText}`);
     }
     
     const listData = await resList.json();

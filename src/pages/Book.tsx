@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ChevronLeft, FileText, Loader2 } from 'lucide-react';
 import { useStore } from '../store';
 import { getFiles, DriveFile } from '../lib/drive';
+import { formatChapterName } from '../lib/utils';
 
 export default function Book() {
   const { id } = useParams();
@@ -76,7 +77,7 @@ export default function Book() {
             {chapters.map((chapter, index) => (
               <button
                 key={chapter.id}
-                onClick={() => navigate(`/read/${chapter.id}`, { state: { chapterName: chapter.name, mimeType: chapter.mimeType } })}
+                onClick={() => navigate(`/read/${chapter.id}`, { state: { chapterName: chapter.name, mimeType: chapter.mimeType, bookId: id, bookName: bookName } })}
                 className={`w-full text-left px-4 py-4 flex items-center gap-3 hover:bg-gray-50 active:bg-gray-100 transition-colors ${
                   index !== chapters.length - 1 ? 'border-b border-gray-100' : ''
                 }`}
@@ -84,7 +85,7 @@ export default function Book() {
                 <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
                   <FileText className="w-5 h-5" />
                 </div>
-                <span className="font-medium text-gray-800 flex-1 truncate">{chapter.name}</span>
+                <span className="font-medium text-gray-800 flex-1 truncate">{formatChapterName(chapter.name)}</span>
               </button>
             ))}
           </div>
