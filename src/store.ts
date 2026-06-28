@@ -52,9 +52,9 @@ interface AppState {
 }
 
 export const useStore = create<AppState>((set, get) => ({
-  token: localStorage.getItem('drive_token'),
-  folderId: localStorage.getItem('drive_folder_id') || import.meta.env.VITE_DRIVE_FOLDER_ID || null,
-  clientId: localStorage.getItem('drive_client_id') || import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+  token: localStorage.getItem('drive_token') || null,
+  folderId: localStorage.getItem('drive_folder_id') || 'r2_bookshelf',
+  clientId: '',
   fontSize: Number(localStorage.getItem('reader_font_size')) || 18,
   theme: (localStorage.getItem('reader_theme') as any) || 'light',
   fontFamily: (localStorage.getItem('reader_font_family') as any) || 'sans',

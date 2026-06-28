@@ -99,27 +99,58 @@ export default function Reader() {
     }
   }, [loading, error, id]);
 
-  // Save scroll position periodically while reading
+  const [currentActiveChapter, setCurrentActiveChapter] = useState<string>('');
+
+  // Save scroll position periodically while reading and determine active chapter
   useEffect(() => {
     if (loading || error || !id) return;
     
     const handleScroll = () => {
       setScrollPosition(id, window.scrollY);
     };
+
+    const handleActiveChapter = () => {
+      if (detectedChapters.length === 0) return;
+      
+      // Find the chapter that is currently at the top of the viewport
+      let activeId = detectedChapters[0].id;
+      for (const chapter of detectedChapters) {
+        const el = document.getElementById(chapter.id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          // If the element is above or close to the top of the viewport
+          if (rect.top <= 100) {
+            activeId = chapter.id;
+          } else {
+            // Once we find a chapter below the top, the previous one is the active one
+            break;
+          }
+        }
+      }
+      
+      const activeChapter = detectedChapters.find(c => c.id === activeId);
+      if (activeChapter && activeChapter.title !== currentActiveChapter) {
+        setCurrentActiveChapter(activeChapter.title);
+      }
+    };
     
-    // Debounce scroll event
+    // Debounce scroll event for saving position, but run active chapter detection more frequently
     let timeoutId: any;
     const debouncedScroll = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(handleScroll, 1000);
+      handleActiveChapter();
     };
 
     window.addEventListener('scroll', debouncedScroll);
+    // Initial check
+    setTimeout(handleActiveChapter, 500);
+    
     return () => {
       window.removeEventListener('scroll', debouncedScroll);
       clearTimeout(timeoutId);
     };
-  }, [loading, error, id, setScrollPosition]);
+  }, [loading, error, id, setScrollPosition, detectedChapters, currentActiveChapter]);
 
   // Handle text selection for highlights
   useEffect(() => {
@@ -214,7 +245,12 @@ export default function Reader() {
           <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10">
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-sm font-medium truncate flex-1 opacity-80">{chapterName}</h1>
+          <div className="flex-1 flex flex-col justify-center min-w-0">
+            <h1 className="text-sm font-medium truncate opacity-90">{currentActiveChapter || chapterName}</h1>
+            {currentActiveChapter && currentActiveChapter !== chapterName && (
+              <span className="text-[10px] opacity-60 truncate">{chapterName}</span>
+            )}
+          </div>
           {detectedChapters.length > 0 && (
             <button 
               onClick={(e) => { e.stopPropagation(); setShowTocDrawer(true); }} 
@@ -232,6 +268,11 @@ export default function Reader() {
             <Bookmark className="w-5 h-5" />
           </button>
         </div>
+      </div>
+
+      {/* Subtle bottom chapter indicator when controls are hidden */}
+      <div className={`fixed bottom-2 right-4 text-[10px] opacity-30 font-sans truncate max-w-[70%] transition-opacity duration-300 pointer-events-none z-40 ${showControls ? 'opacity-0' : 'opacity-40'}`}>
+        {currentActiveChapter || chapterName}
       </div>
 
       {/* Main Content Area */}
@@ -289,6 +330,11 @@ export default function Reader() {
             className={`prose prose-lg max-w-none dark:prose-invert ${fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans'}`}
             style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
           >
+            {/* Chapter Header */}
+            <h1 className="text-center font-bold mb-10 opacity-80 pb-4 border-b border-gray-200 dark:border-gray-800" style={{ fontSize: `${Math.max(20, fontSize * 1.3)}px`, lineHeight: 1.4 }}>
+              {chapterName}
+            </h1>
+            
             <MemoizedContent
               isHtmlContent={isHtmlContent}
               content={content}

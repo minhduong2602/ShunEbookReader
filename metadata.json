@@ -1,5 +1,6 @@
 {
-  "name": "Drive Novel Reader",
-  "description": "A mobile-first novel reader that connects to a Google Drive folder as a bookshelf.",
-  "requestFramePermissions": []
+  "name": "Novel Reader",
+  "description": "A mobile-first novel reader that uses Cloudflare R2 as a bookshelf with local and cloud sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

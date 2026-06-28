@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Folder, Key } from 'lucide-react';
+import { BookOpen, User, Key, Loader2 } from 'lucide-react';
 import { useStore } from '../store';
 
 export default function Connect() {
   const navigate = useNavigate();
-  const { token, folderId, clientId, setToken, setFolderId, setClientId } = useStore();
-  const [localClientId, setLocalClientId] = useState(clientId || '');
-  const [localFolderId, setLocalFolderId] = useState(folderId || '');
+  const { token, folderId, setUserName, setToken, setFolderId } = useStore();
+  const [localId, setLocalId] = useState('');
+  const [localPassword, setLocalPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (token && folderId) {
@@ -16,49 +17,35 @@ export default function Connect() {
     }
   }, [token, folderId, navigate]);
 
-  const isPreConfigured = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID && import.meta.env.VITE_DRIVE_FOLDER_ID);
-  const [hasAttemptedAutoConnect, setHasAttemptedAutoConnect] = useState(false);
-
-  useEffect(() => {
-    if (isPreConfigured && !token && !hasAttemptedAutoConnect && !error) {
-      setHasAttemptedAutoConnect(true);
-      // Optional: Auto-trigger connect if it's completely rigid but standard OAuth needs user action
-      // We will let the user click instead of throwing popup arbitrarily.
-    }
-  }, [isPreConfigured, token, hasAttemptedAutoConnect, error]);
-
-  const handleConnect = () => {
+  const handleStart = async () => {
     setError('');
-    if (!localClientId) {
-      setError('Google Client ID is required');
-      return;
-    }
-    if (!localFolderId) {
-      setError('Drive Folder ID is required');
+    const trimmedId = localId.trim();
+    if (!trimmedId || !localPassword) {
+      setError('Vui lòng nhập ID và Mật khẩu');
       return;
     }
 
-    setClientId(localClientId);
-    setFolderId(localFolderId);
-
+    setIsLoading(true);
     try {
-      const client = (window as any).google.accounts.oauth2.initTokenClient({
-        client_id: localClientId,
-        scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.appdata',
-        callback: (response: any) => {
-          if (response.error) {
-            setError(response.error_description || 'Failed to authenticate');
-            return;
-          }
-          if (response.access_token) {
-            setToken(response.access_token);
-            navigate('/bookshelf', { replace: true });
-          }
-        },
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: trimmedId, password: localPassword })
       });
-      client.requestAccessToken();
-    } catch (err) {
-      setError('Google Identity Services not loaded. Please check your Client ID or refresh.');
+      
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Đăng nhập thất bại');
+      }
+      
+      setUserName(trimmedId);
+      setToken(data.token);
+      setFolderId('r2_bookshelf');
+      navigate('/bookshelf', { replace: true });
+    } catch (err: any) {
+      setError(err.message || 'Đăng nhập thất bại');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -69,56 +56,57 @@ export default function Connect() {
           <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <BookOpen className="w-8 h-8 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Drive Reader</h1>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Novel Reader</h1>
           <p className="text-gray-500 text-sm">
-            {isPreConfigured ? 'Your app is pre-configured. Click connect to proceed.' : 'Connect your Google Drive folder to start reading'}
+            Tủ sách cá nhân của bạn. Vui lòng đăng nhập để tiếp tục.
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center">
+          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center font-medium">
             {error}
           </div>
         )}
 
         <div className="space-y-4">
-          {!isPreConfigured && (
-            <>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Key className="w-4 h-4" /> Google Client ID
-                </label>
-                <input
-                  type="text"
-                  value={localClientId}
-                  onChange={(e) => setLocalClientId(e.target.value)}
-                  placeholder="123456789-abc...apps.googleusercontent.com"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                />
-                <p className="text-xs text-gray-400">Needs 'drive.readonly' and 'drive.appdata' scopes</p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Folder className="w-4 h-4" /> Bookshelf Folder ID
-                </label>
-                <input
-                  type="text"
-                  value={localFolderId}
-                  onChange={(e) => setLocalFolderId(e.target.value)}
-                  placeholder="1A2b3C4d5E6f7G8h9I0j"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                />
-                <p className="text-xs text-gray-400">The ID from your Google Drive folder URL</p>
-              </div>
-            </>
-          )}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <User className="w-4 h-4 text-gray-400" /> ID
+            </label>
+            <input
+              type="text"
+              value={localId}
+              onChange={(e) => setLocalId(e.target.value)}
+              placeholder="Nhập ID..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleStart();
+              }}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <Key className="w-4 h-4 text-gray-400" /> Mật khẩu
+            </label>
+            <input
+              type="password"
+              value={localPassword}
+              onChange={(e) => setLocalPassword(e.target.value)}
+              placeholder="Nhập mật khẩu..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleStart();
+              }}
+            />
+          </div>
 
           <button
-            onClick={handleConnect}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors shadow-md hover:shadow-lg active:scale-[0.98]"
+            onClick={handleStart}
+            disabled={isLoading}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3 rounded-lg transition-colors shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
           >
-            Connect to Drive
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Đăng nhập'}
           </button>
         </div>
       </div>
