@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import { createServer as createViteServer } from "vite";
 import multer from "multer";
 import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 
@@ -55,8 +54,19 @@ function getS3Client() {
     if (!isR2Configured()) {
       throw new Error("R2 is not fully configured");
     }
+    
+    let endpoint = process.env.R2_ENDPOINT || "";
+    if (!endpoint.startsWith("http")) endpoint = `https://${endpoint}`;
+    // Remove trailing slash or bucket name from endpoint if user accidentally included it
+    try {
+      const url = new URL(endpoint);
+      endpoint = `${url.protocol}//${url.host}`;
+    } catch (e) {
+      // Ignored
+    }
+
     s3Client = new S3Client({
-      endpoint: process.env.R2_ENDPOINT?.startsWith("http") ? process.env.R2_ENDPOINT : `https://${process.env.R2_ENDPOINT}`,
+      endpoint: endpoint,
       credentials: {
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
@@ -73,8 +83,12 @@ const BUCKET = process.env.R2_BUCKET_NAME || "";
 // Ensure local data folders exist if falling back
 const LOCAL_DATA_DIR = path.join(process.cwd(), "data");
 const LOCAL_NOVELS_DIR = path.join(LOCAL_DATA_DIR, "novels");
-if (!fs.existsSync(LOCAL_NOVELS_DIR)) {
-  fs.mkdirSync(LOCAL_NOVELS_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(LOCAL_NOVELS_DIR)) {
+    fs.mkdirSync(LOCAL_NOVELS_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn("Failed to create local data directory (expected on Vercel)");
 }
 
 // Ensure at least one dummy sample book exists if local storage is completely empty
@@ -146,11 +160,8 @@ app.get("/api/books", async (req, res) => {
 
         return res.json([...books, ...rootFiles]);
       } catch (r2Err: any) {
-        if (r2Err.name === "NoSuchKey" || r2Err.message?.includes("NoSuchKey")) {
-          // Do nothing
-        } else {
-          console.warn("R2 failed to list books, falling back to local filesystem:", r2Err.message);
-        }
+        console.error("R2 failed to list books:", r2Err);
+        return res.status(500).json({ error: `Cloudflare R2 Error: ${r2Err.message}` });
       }
     }
     
@@ -237,11 +248,8 @@ app.get("/api/books/:bookId/chapters", async (req, res) => {
           });
         return res.json(files);
       } catch (r2Err: any) {
-        if (r2Err.name === "NoSuchKey" || r2Err.message?.includes("NoSuchKey")) {
-          // Do nothing, just fall through to local fallback silently
-        } else {
-          console.warn(`R2 failed to list chapters for ${bookName}, falling back to local:`, r2Err.message);
-        }
+        console.error(`R2 failed to list chapters for ${bookName}:`, r2Err);
+        return res.status(500).json({ error: `Cloudflare R2 Error: ${r2Err.message}` });
       }
     }
     
@@ -302,11 +310,8 @@ app.get("/api/chapters/:id/content", async (req, res) => {
           return res.send(buffer);
         }
       } catch (r2Err: any) {
-        if (r2Err.name === "NoSuchKey" || r2Err.message?.includes("NoSuchKey")) {
-          // Do nothing, just fall through to local fallback silently
-        } else {
-          console.warn(`R2 failed to load content for ${key}, checking local fallback:`, r2Err.message);
-        }
+        console.error(`R2 failed to load content for ${key}:`, r2Err);
+        return res.status(500).json({ error: `Cloudflare R2 Error: ${r2Err.message}` });
       }
     }
     
@@ -360,14 +365,18 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     }
 
     // Always write locally as cache and resilient fallback
-    if (sanitizedBookName) {
-      const bookDir = path.join(LOCAL_NOVELS_DIR, sanitizedBookName);
-      if (!fs.existsSync(bookDir)) {
-        fs.mkdirSync(bookDir, { recursive: true });
+    try {
+      if (sanitizedBookName) {
+        const bookDir = path.join(LOCAL_NOVELS_DIR, sanitizedBookName);
+        if (!fs.existsSync(bookDir)) {
+          fs.mkdirSync(bookDir, { recursive: true });
+        }
+        fs.writeFileSync(path.join(bookDir, fileName), req.file.buffer);
+      } else {
+        fs.writeFileSync(path.join(LOCAL_NOVELS_DIR, fileName), req.file.buffer);
       }
-      fs.writeFileSync(path.join(bookDir, fileName), req.file.buffer);
-    } else {
-      fs.writeFileSync(path.join(LOCAL_NOVELS_DIR, fileName), req.file.buffer);
+    } catch (e) {
+      console.warn("Failed to write uploaded file locally (expected on Vercel):", e);
     }
 
     return res.json({ success: true, key, uploadedToR2 });
@@ -445,8 +454,13 @@ app.post("/api/sync", async (req, res) => {
     }
     
     // Always write locally as cache and resilient fallback
-    const syncPath = path.join(LOCAL_DATA_DIR, syncKey);
-    fs.writeFileSync(syncPath, JSON.stringify(state), "utf-8");
+    try {
+      const syncPath = path.join(LOCAL_DATA_DIR, syncKey);
+      fs.writeFileSync(syncPath, JSON.stringify(state), "utf-8");
+    } catch (e) {
+      console.warn("Failed to write sync state locally (expected on Vercel):", e);
+    }
+
     
     return res.json({ success: true, savedToR2 });
   } catch (err: any) {
@@ -458,6 +472,8 @@ app.post("/api/sync", async (req, res) => {
 // Vite & Static file handler
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const viteModule = "vite";
+    const { createServer: createViteServer } = await import(viteModule);
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -476,4 +492,8 @@ async function startServer() {
   });
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
