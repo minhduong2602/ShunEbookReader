@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { fileURLToPath } from "url";
 import multer from "multer";
 import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 
@@ -81,7 +80,7 @@ function getS3Client() {
 const BUCKET = process.env.R2_BUCKET_NAME || "";
 
 // Ensure local data folders exist if falling back
-const LOCAL_DATA_DIR = path.join(process.cwd(), "data");
+const LOCAL_DATA_DIR = process.env.VERCEL ? path.join("/tmp", "data") : path.join(process.cwd(), "data");
 const LOCAL_NOVELS_DIR = path.join(LOCAL_DATA_DIR, "novels");
 try {
   if (!fs.existsSync(LOCAL_NOVELS_DIR)) {
