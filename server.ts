@@ -11,7 +11,7 @@ const PORT = 3000;
 app.use(express.json({ limit: "50mb" }));
 
 app.post("/api/login", (req, res) => {
-  const { id, password } = req.body;
+  const { id, password } = req.body || {};
   if (
     process.env.AUTH_ID && process.env.AUTH_PASSWORD &&
     id === process.env.AUTH_ID && password === process.env.AUTH_PASSWORD
@@ -338,7 +338,7 @@ app.get("/api/chapters/:id/content", async (req, res) => {
 // 4. API: Upload Novel Chapter
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   try {
-    const { bookName } = req.body;
+    const { bookName } = req.body || {};
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
@@ -435,7 +435,7 @@ app.get("/api/sync", async (req, res) => {
 app.post("/api/sync", async (req, res) => {
   const syncKey = "reader_sync_v1.json";
   try {
-    const state = req.body;
+    const state = req.body || {};
     let savedToR2 = false;
     if (isR2Configured()) {
       try {
