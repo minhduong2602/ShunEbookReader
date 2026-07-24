@@ -18,6 +18,12 @@ export interface ReadHistoryEntry {
   lastChapterName?: string;
 }
 
+export interface QuickNote {
+  id: string;
+  text: string;
+  timestamp: number;
+}
+
 interface AppState {
   token: string | null;
   folderId: string | null;
@@ -30,6 +36,7 @@ interface AppState {
   currentBookChapters: DriveFile[];
   scrollPositions: Record<string, number>;
   highlights: Record<string, Highlight[]>;
+  quickNotes: QuickNote[];
   isSessionExpired: boolean;
   isSyncing: boolean;
   lastSyncedAt: number;
@@ -45,6 +52,8 @@ interface AppState {
   setScrollPosition: (chapterId: string, position: number) => void;
   addHighlight: (chapterId: string, highlight: Highlight) => void;
   removeHighlight: (chapterId: string, highlightId: string) => void;
+  addQuickNote: (note: QuickNote) => void;
+  removeQuickNote: (noteId: string) => void;
   setSessionExpired: (expired: boolean) => void;
   loadSyncFromDrive: () => Promise<void>;
   triggerSyncToDrive: () => Promise<void>;
@@ -63,6 +72,7 @@ export const useStore = create<AppState>((set, get) => ({
   currentBookChapters: [],
   scrollPositions: JSON.parse(localStorage.getItem('reader_scroll_positions') || '{}'),
   highlights: JSON.parse(localStorage.getItem('reader_highlights') || '{}'),
+  quickNotes: JSON.parse(localStorage.getItem('reader_quick_notes') || '[]'),
   isSessionExpired: false,
   isSyncing: false,
   lastSyncedAt: 0,
@@ -136,6 +146,20 @@ export const useStore = create<AppState>((set, get) => ({
       return { highlights: newHighlights };
     });
   },
+  addQuickNote: (note) => {
+    set((state) => {
+      const newNotes = [...state.quickNotes, note];
+      localStorage.setItem('reader_quick_notes', JSON.stringify(newNotes));
+      return { quickNotes: newNotes };
+    });
+  },
+  removeQuickNote: (noteId) => {
+    set((state) => {
+      const newNotes = state.quickNotes.filter(n => n.id !== noteId);
+      localStorage.setItem('reader_quick_notes', JSON.stringify(newNotes));
+      return { quickNotes: newNotes };
+    });
+  },
   setSessionExpired: (expired) => {
     set({ isSessionExpired: expired });
   },
@@ -154,6 +178,9 @@ export const useStore = create<AppState>((set, get) => ({
         
         localStorage.setItem('reader_scroll_positions', JSON.stringify(mergedScrolls));
         localStorage.setItem('reader_highlights', JSON.stringify(mergedHighlights));
+        if (state.quickNotes) {
+          localStorage.setItem('reader_quick_notes', JSON.stringify(state.quickNotes));
+        }
         
         // Settings sync
         if (state.fontSize) localStorage.setItem('reader_font_size', state.fontSize);
@@ -165,6 +192,7 @@ export const useStore = create<AppState>((set, get) => ({
         set({ 
           scrollPositions: mergedScrolls, 
           highlights: mergedHighlights,
+          ...(state.quickNotes ? { quickNotes: state.quickNotes } : {}),
           ...(state.fontSize ? { fontSize: Number(state.fontSize) } : {}),
           ...(state.theme ? { theme: state.theme } : {}),
           ...(state.fontFamily ? { fontFamily: state.fontFamily } : {}),
@@ -178,12 +206,13 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
   triggerSyncToDrive: async () => {
-    const { token, scrollPositions, highlights, fontSize, theme, fontFamily, userName, readHistory } = get();
+    const { token, scrollPositions, highlights, quickNotes, fontSize, theme, fontFamily, userName, readHistory } = get();
     if (!token) return;
     try {
       await saveSyncState(token, {
         scrollPositions,
         highlights,
+        quickNotes,
         fontSize,
         theme,
         fontFamily,

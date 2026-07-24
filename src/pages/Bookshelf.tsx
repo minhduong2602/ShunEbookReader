@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Book, LogOut, Loader2, Folder as FolderIcon, Download, Clock, Settings, FileText, List, Upload } from 'lucide-react';
+import { Book, LogOut, Loader2, Folder as FolderIcon, Download, Clock, Settings, FileText, List, Upload, MessageSquare } from 'lucide-react';
 import { useStore } from '../store';
 import { getFolders, DriveFile } from '../lib/drive';
 import UploadModal from '../components/UploadModal';
+import NotesTab from '../components/NotesTab';
 
 export default function Bookshelf() {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ export default function Bookshelf() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'books' | 'recent'>('recent');
+  const [activeTab, setActiveTab] = useState<'books' | 'recent' | 'notes'>('recent');
   
   // Upload modal state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -127,6 +128,12 @@ export default function Bookshelf() {
           >
             <FolderIcon className="w-4 h-4" /> Folders
           </button>
+          <button 
+            onClick={() => setActiveTab('notes')}
+            className={`py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'notes' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-750 dark:hover:text-gray-300'}`}
+          >
+            <MessageSquare className="w-4 h-4" /> Notes
+          </button>
         </div>
       </header>
 
@@ -144,8 +151,10 @@ export default function Bookshelf() {
         </div>
       )}
 
-      <main className="max-w-4xl mx-auto p-4">
-        {activeTab === 'recent' ? (
+      <main className={`max-w-4xl mx-auto ${activeTab === 'notes' ? '' : 'p-4'}`}>
+        {activeTab === 'notes' ? (
+          <NotesTab />
+        ) : activeTab === 'recent' ? (
           <div className="space-y-4">
             {readHistory.length === 0 ? (
               <div className="text-center py-20 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-8 shadow-sm">
