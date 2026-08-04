@@ -36,7 +36,7 @@ export default function Reader() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { token, logout, fontSize, theme, fontFamily, setFontFamily, setFontSize, setTheme, currentBookChapters, scrollPositions, setScrollPosition, addHighlight, highlights, removeHighlight, updateReadHistory } = useStore();
+  const { token, logout, fontSize, theme, fontFamily, setFontFamily, setFontSize, setTheme, currentBookChapters, scrollPositions, setScrollPosition, addHighlight, highlights, removeHighlight, updateReadHistory, setChapterCompleted, triggerSyncToDrive } = useStore();
 
   const [content, setContent] = useState('');
   const [processedContent, setProcessedContent] = useState('');
@@ -69,6 +69,8 @@ export default function Reader() {
   useEffect(() => {
     if (token && id) {
       loadContent();
+      setChapterCompleted(id, true);
+      triggerSyncToDrive().catch(console.error);
       if (bookId && bookName) {
         updateReadHistory({
           bookId,

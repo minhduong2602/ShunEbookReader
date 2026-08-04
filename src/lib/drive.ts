@@ -4,6 +4,7 @@ export interface DriveFile {
   id: string;
   name: string;
   mimeType: string;
+  updatedAt?: number;
 }
 
 export async function getSyncState(token: string | null): Promise<any | null> {

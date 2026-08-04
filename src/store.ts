@@ -37,6 +37,8 @@ interface AppState {
   scrollPositions: Record<string, number>;
   highlights: Record<string, Highlight[]>;
   quickNotes: QuickNote[];
+  completedBooks: Record<string, boolean>;
+  completedChapters: Record<string, boolean>;
   isSessionExpired: boolean;
   isSyncing: boolean;
   lastSyncedAt: number;
@@ -54,6 +56,11 @@ interface AppState {
   removeHighlight: (chapterId: string, highlightId: string) => void;
   addQuickNote: (note: QuickNote) => void;
   removeQuickNote: (noteId: string) => void;
+  toggleBookCompleted: (bookId: string) => void;
+  setBookCompleted: (bookId: string, completed: boolean) => void;
+  toggleChapterCompleted: (chapterId: string) => void;
+  setChapterCompleted: (chapterId: string, completed: boolean) => void;
+  markAllChaptersCompleted: (bookId: string, chapterIds: string[], completed: boolean) => void;
   setSessionExpired: (expired: boolean) => void;
   loadSyncFromDrive: () => Promise<void>;
   triggerSyncToDrive: () => Promise<void>;
@@ -73,6 +80,8 @@ export const useStore = create<AppState>((set, get) => ({
   scrollPositions: JSON.parse(localStorage.getItem('reader_scroll_positions') || '{}'),
   highlights: JSON.parse(localStorage.getItem('reader_highlights') || '{}'),
   quickNotes: JSON.parse(localStorage.getItem('reader_quick_notes') || '[]'),
+  completedBooks: JSON.parse(localStorage.getItem('reader_completed_books') || '{}'),
+  completedChapters: JSON.parse(localStorage.getItem('reader_completed_chapters') || '{}'),
   isSessionExpired: false,
   isSyncing: false,
   lastSyncedAt: 0,
@@ -160,6 +169,48 @@ export const useStore = create<AppState>((set, get) => ({
       return { quickNotes: newNotes };
     });
   },
+  toggleBookCompleted: (bookId) => {
+    set((state) => {
+      const isComp = !state.completedBooks[bookId];
+      const newBooks = { ...state.completedBooks, [bookId]: isComp };
+      localStorage.setItem('reader_completed_books', JSON.stringify(newBooks));
+      return { completedBooks: newBooks };
+    });
+  },
+  setBookCompleted: (bookId, completed) => {
+    set((state) => {
+      const newBooks = { ...state.completedBooks, [bookId]: completed };
+      localStorage.setItem('reader_completed_books', JSON.stringify(newBooks));
+      return { completedBooks: newBooks };
+    });
+  },
+  toggleChapterCompleted: (chapterId) => {
+    set((state) => {
+      const isComp = !state.completedChapters[chapterId];
+      const newChaps = { ...state.completedChapters, [chapterId]: isComp };
+      localStorage.setItem('reader_completed_chapters', JSON.stringify(newChaps));
+      return { completedChapters: newChaps };
+    });
+  },
+  setChapterCompleted: (chapterId, completed) => {
+    set((state) => {
+      const newChaps = { ...state.completedChapters, [chapterId]: completed };
+      localStorage.setItem('reader_completed_chapters', JSON.stringify(newChaps));
+      return { completedChapters: newChaps };
+    });
+  },
+  markAllChaptersCompleted: (bookId, chapterIds, completed) => {
+    set((state) => {
+      const newChaps = { ...state.completedChapters };
+      chapterIds.forEach(id => {
+        newChaps[id] = completed;
+      });
+      const newBooks = { ...state.completedBooks, [bookId]: completed };
+      localStorage.setItem('reader_completed_chapters', JSON.stringify(newChaps));
+      localStorage.setItem('reader_completed_books', JSON.stringify(newBooks));
+      return { completedChapters: newChaps, completedBooks: newBooks };
+    });
+  },
   setSessionExpired: (expired) => {
     set({ isSessionExpired: expired });
   },
@@ -171,13 +222,15 @@ export const useStore = create<AppState>((set, get) => ({
     try {
       const state = await getSyncState(token);
       if (state) {
-        // Merge cloud state over local state intelligently based on lastSynced timestamp if we tracked per-item,
-        // or just accept cloud as truth. For simplicity, Cloud state wins on load, but we preserve local keys that aren't in cloud.
         const mergedScrolls = { ...get().scrollPositions, ...(state.scrollPositions || {}) };
         const mergedHighlights = { ...get().highlights, ...(state.highlights || {}) };
+        const mergedCompletedBooks = { ...get().completedBooks, ...(state.completedBooks || {}) };
+        const mergedCompletedChapters = { ...get().completedChapters, ...(state.completedChapters || {}) };
         
         localStorage.setItem('reader_scroll_positions', JSON.stringify(mergedScrolls));
         localStorage.setItem('reader_highlights', JSON.stringify(mergedHighlights));
+        localStorage.setItem('reader_completed_books', JSON.stringify(mergedCompletedBooks));
+        localStorage.setItem('reader_completed_chapters', JSON.stringify(mergedCompletedChapters));
         if (state.quickNotes) {
           localStorage.setItem('reader_quick_notes', JSON.stringify(state.quickNotes));
         }
@@ -192,6 +245,8 @@ export const useStore = create<AppState>((set, get) => ({
         set({ 
           scrollPositions: mergedScrolls, 
           highlights: mergedHighlights,
+          completedBooks: mergedCompletedBooks,
+          completedChapters: mergedCompletedChapters,
           ...(state.quickNotes ? { quickNotes: state.quickNotes } : {}),
           ...(state.fontSize ? { fontSize: Number(state.fontSize) } : {}),
           ...(state.theme ? { theme: state.theme } : {}),
@@ -206,18 +261,53 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
   triggerSyncToDrive: async () => {
-    const { token, scrollPositions, highlights, quickNotes, fontSize, theme, fontFamily, userName, readHistory } = get();
+    const currentState = get();
+    const { token } = currentState;
     if (!token) return;
     try {
+      const cloudState = await getSyncState(token);
+      let mergedQuickNotes = [...currentState.quickNotes];
+      let mergedHighlights = { ...currentState.highlights };
+      let mergedCompletedBooks = { ...currentState.completedBooks };
+      let mergedCompletedChapters = { ...currentState.completedChapters };
+      let mergedScrollPositions = { ...currentState.scrollPositions };
+
+      if (cloudState) {
+        if (cloudState.quickNotes) {
+          const localIds = new Set(mergedQuickNotes.map(n => n.id));
+          const missingCloudNotes = cloudState.quickNotes.filter((n: any) => !localIds.has(n.id));
+          if (missingCloudNotes.length > 0) {
+            mergedQuickNotes = [...mergedQuickNotes, ...missingCloudNotes].sort((a, b) => a.timestamp - b.timestamp);
+            localStorage.setItem('reader_quick_notes', JSON.stringify(mergedQuickNotes));
+            set({ quickNotes: mergedQuickNotes });
+          }
+        }
+        
+        if (cloudState.highlights) {
+          mergedHighlights = { ...cloudState.highlights, ...mergedHighlights };
+        }
+        if (cloudState.completedBooks) {
+          mergedCompletedBooks = { ...cloudState.completedBooks, ...mergedCompletedBooks };
+        }
+        if (cloudState.completedChapters) {
+          mergedCompletedChapters = { ...cloudState.completedChapters, ...mergedCompletedChapters };
+        }
+        if (cloudState.scrollPositions) {
+          mergedScrollPositions = { ...cloudState.scrollPositions, ...mergedScrollPositions };
+        }
+      }
+
       await saveSyncState(token, {
-        scrollPositions,
-        highlights,
-        quickNotes,
-        fontSize,
-        theme,
-        fontFamily,
-        userName,
-        readHistory,
+        scrollPositions: mergedScrollPositions,
+        highlights: mergedHighlights,
+        quickNotes: mergedQuickNotes,
+        completedBooks: mergedCompletedBooks,
+        completedChapters: mergedCompletedChapters,
+        fontSize: currentState.fontSize,
+        theme: currentState.theme,
+        fontFamily: currentState.fontFamily,
+        userName: currentState.userName,
+        readHistory: currentState.readHistory,
         timestamp: Date.now()
       });
       set({ lastSyncedAt: Date.now() });

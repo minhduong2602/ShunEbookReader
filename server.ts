@@ -113,51 +113,58 @@ app.get("/api/books", async (req, res) => {
         const s3 = getS3Client();
         const command = new ListObjectsV2Command({
           Bucket: BUCKET,
-          Delimiter: "/",
         });
         const data = await s3.send(command);
         
-        const books = (data.CommonPrefixes || []).map((prefixObj, idx) => {
-          const rawPrefix = prefixObj.Prefix || "";
-          const bookName = rawPrefix.endsWith("/") ? rawPrefix.slice(0, -1) : rawPrefix;
-          return {
-            id: encodeURIComponent(bookName),
-            name: bookName,
-            mimeType: "application/vnd.google-apps.folder",
-          };
-        });
+        const folderLastModified: Record<string, number> = {};
+        const booksMap = new Map<string, { id: string; name: string; mimeType: string; updatedAt: number }>();
+        const rootFiles: any[] = [];
 
         (data.Contents || []).forEach(file => {
-          if (file.Key?.endsWith("/") && file.Key !== "/") {
-            const bookName = file.Key.slice(0, -1);
-            if (!books.find(b => b.name === bookName)) {
-              books.push({
+          if (!file.Key) return;
+          const parts = file.Key.split("/");
+          const mtime = file.LastModified ? new Date(file.LastModified).getTime() : 0;
+
+          if (parts.length > 1 && parts[0]) {
+            // It's in a folder
+            const bookName = parts[0];
+            if (!folderLastModified[bookName] || mtime > folderLastModified[bookName]) {
+              folderLastModified[bookName] = mtime;
+            }
+            if (!booksMap.has(bookName)) {
+              booksMap.set(bookName, {
                 id: encodeURIComponent(bookName),
                 name: bookName,
                 mimeType: "application/vnd.google-apps.folder",
+                updatedAt: mtime
+              });
+            } else {
+              const b = booksMap.get(bookName)!;
+              if (mtime > b.updatedAt) {
+                b.updatedAt = mtime;
+              }
+            }
+          } else {
+            // Root file
+            if (!file.Key.endsWith("/") && (file.Key.endsWith(".txt") || file.Key.endsWith(".docx") || file.Key.endsWith(".html") || file.Key.endsWith(".htm"))) {
+              let mimeType = "text/plain";
+              if (file.Key.endsWith(".docx")) mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+              else if (file.Key.endsWith(".html") || file.Key.endsWith(".htm")) mimeType = "text/html";
+              
+              rootFiles.push({
+                id: encodeURIComponent(file.Key),
+                name: file.Key,
+                mimeType,
+                updatedAt: mtime,
               });
             }
           }
         });
 
-        const rootFiles = (data.Contents || [])
-          .filter(file => !file.Key?.endsWith("/") && (file.Key?.endsWith(".txt") || file.Key?.endsWith(".docx") || file.Key?.endsWith(".html") || file.Key?.endsWith(".htm")))
-          .map(file => {
-            const key = file.Key || "";
-            let mimeType = "text/plain";
-            if (key.endsWith(".docx")) {
-              mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-            } else if (key.endsWith(".html") || key.endsWith(".htm")) {
-              mimeType = "text/html";
-            }
-            return {
-              id: encodeURIComponent(key),
-              name: key,
-              mimeType,
-            };
-          });
-
-        return res.json([...books, ...rootFiles]);
+        const books = Array.from(booksMap.values());
+        const allItems = [...books, ...rootFiles];
+        allItems.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        return res.json(allItems);
       } catch (r2Err: any) {
         console.error("R2 failed to list books:", r2Err);
         return res.status(500).json({ error: `Cloudflare R2 Error: ${r2Err.message}` });
@@ -168,11 +175,23 @@ app.get("/api/books", async (req, res) => {
     const items = fs.readdirSync(LOCAL_NOVELS_DIR, { withFileTypes: true });
     const books = items
       .filter((item) => item.isDirectory())
-      .map((item) => ({
-        id: encodeURIComponent(item.name),
-        name: item.name,
-        mimeType: "application/vnd.google-apps.folder",
-      }));
+      .map((item) => {
+        const bookDir = path.join(LOCAL_NOVELS_DIR, item.name);
+        let maxMtime = fs.statSync(bookDir).mtimeMs;
+        try {
+          const subFiles = fs.readdirSync(bookDir);
+          subFiles.forEach(f => {
+            const fStat = fs.statSync(path.join(bookDir, f));
+            if (fStat.mtimeMs > maxMtime) maxMtime = fStat.mtimeMs;
+          });
+        } catch (e) {}
+        return {
+          id: encodeURIComponent(item.name),
+          name: item.name,
+          mimeType: "application/vnd.google-apps.folder",
+          updatedAt: maxMtime,
+        };
+      });
       
     const rootFiles = items
       .filter((item) => item.isFile() && item.name.match(/\.(txt|docx|html|htm)$/i))
@@ -183,14 +202,18 @@ app.get("/api/books", async (req, res) => {
         } else if (item.name.endsWith(".html") || item.name.endsWith(".htm")) {
           mimeType = "text/html";
         }
+        const fStat = fs.statSync(path.join(LOCAL_NOVELS_DIR, item.name));
         return {
           id: encodeURIComponent(item.name),
           name: item.name,
           mimeType,
+          updatedAt: fStat.mtimeMs,
         };
       });
 
-    return res.json([...books, ...rootFiles]);
+    const allItems = [...books, ...rootFiles];
+    allItems.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    return res.json(allItems);
   } catch (err: any) {
     console.error("Failed to list books", err);
     return res.status(500).json({ error: err.message || "Failed to list books" });
@@ -230,7 +253,7 @@ app.get("/api/books/:bookId/chapters", async (req, res) => {
         
         const files = (data.Contents || [])
           .filter(file => file.Key !== prefix && !file.Key?.endsWith("/"))
-          .map((file, idx) => {
+          .map((file) => {
             const key = file.Key || "";
             const name = key.replace(prefix, "");
             let mimeType = "text/plain";
@@ -243,6 +266,7 @@ app.get("/api/books/:bookId/chapters", async (req, res) => {
               id: btoa(encodeURIComponent(key)), // Safe base64 id
               name: name,
               mimeType: mimeType,
+              updatedAt: file.LastModified ? new Date(file.LastModified).getTime() : Date.now(),
             };
           });
         return res.json(files);
@@ -268,10 +292,13 @@ app.get("/api/books/:bookId/chapters", async (req, res) => {
           mimeType = "text/html";
         }
         const key = `${bookName}/${item.name}`;
+        const filePath = path.join(bookDir, item.name);
+        const fStat = fs.statSync(filePath);
         return {
           id: btoa(encodeURIComponent(key)),
           name: item.name,
           mimeType: mimeType,
+          updatedAt: fStat.mtimeMs,
         };
       });
     return res.json(files);

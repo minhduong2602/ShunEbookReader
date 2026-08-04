@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Book, LogOut, Loader2, Folder as FolderIcon, Download, Clock, Settings, FileText, List, Upload, MessageSquare } from 'lucide-react';
+import { Book, LogOut, Loader2, Folder as FolderIcon, Download, Clock, Settings, FileText, List, Upload, MessageSquare, CheckCircle2, Circle, ArrowUpDown } from 'lucide-react';
 import { useStore } from '../store';
 import { getFolders, DriveFile } from '../lib/drive';
 import UploadModal from '../components/UploadModal';
@@ -8,12 +8,25 @@ import NotesTab from '../components/NotesTab';
 
 export default function Bookshelf() {
   const navigate = useNavigate();
-  const { token, folderId, logout, loadSyncFromDrive, readHistory, userName } = useStore();
+  const { token, folderId, logout, loadSyncFromDrive, readHistory, userName, completedBooks, toggleBookCompleted, triggerSyncToDrive } = useStore();
   const [books, setBooks] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'books' | 'recent' | 'notes'>('recent');
+  const [activeTab, setActiveTab] = useState<'books' | 'recent' | 'notes'>(
+    (localStorage.getItem('reader_active_tab') as any) || 'recent'
+  );
+  const [sortBy, setSortBy] = useState<'newest' | 'name'>(
+    (localStorage.getItem('reader_sort_by') as any) || 'newest'
+  );
+
+  useEffect(() => {
+    localStorage.setItem('reader_active_tab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    localStorage.setItem('reader_sort_by', sortBy);
+  }, [sortBy]);
   
   // Upload modal state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -65,8 +78,25 @@ export default function Bookshelf() {
     navigate('/', { replace: true });
   };
 
+  const sortedBooks = [...books].sort((a, b) => {
+    if (sortBy === 'newest') {
+      const timeA = a.updatedAt || 0;
+      const timeB = b.updatedAt || 0;
+      if (timeA !== timeB) return timeB - timeA;
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+    } else {
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+    }
+  });
+
+  const handleToggleBookRead = (e: MouseEvent, bookId: string) => {
+    e.stopPropagation();
+    toggleBookCompleted(bookId);
+    triggerSyncToDrive().catch(console.error);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20 transition-colors">
+    <div className={`min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors ${activeTab === 'notes' ? '' : 'pb-20'}`}>
       <header className="bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-10 border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -228,21 +258,83 @@ export default function Bookshelf() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {books.map((book) => (
-              <button
-                key={book.id}
-                onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
-                className="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-all text-left flex flex-col items-center gap-3 group active:scale-95 cursor-pointer"
-              >
-                <div className="w-full aspect-[3/4] bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-850 dark:to-gray-800 rounded-xl flex items-center justify-center group-hover:from-blue-100 group-hover:to-indigo-100 dark:group-hover:from-gray-800 dark:group-hover:to-gray-750 transition-colors shadow-inner">
-                  <Book className="w-10 h-10 text-blue-300 dark:text-blue-500 group-hover:text-blue-400 group-hover:scale-105 transition-all" />
-                </div>
-                <h2 className="font-bold text-gray-800 dark:text-gray-200 line-clamp-2 text-sm text-center w-full leading-tight">
-                  {book.name}
-                </h2>
-              </button>
-            ))}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                {books.length} truyện / tệp
+              </span>
+
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl text-xs">
+                <button
+                  onClick={() => setSortBy('newest')}
+                  className={`px-2.5 py-1 rounded-lg font-medium transition-colors flex items-center gap-1 ${
+                    sortBy === 'newest' 
+                      ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs' 
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <ArrowUpDown className="w-3 h-3" />
+                  Mới cập nhật/upload
+                </button>
+                <button
+                  onClick={() => setSortBy('name')}
+                  className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                    sortBy === 'name' 
+                      ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs' 
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  Tên A-Z
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {sortedBooks.map((book) => {
+                const isRead = completedBooks[book.id];
+                return (
+                  <div
+                    key={book.id}
+                    onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
+                    className="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-all text-left flex flex-col items-center gap-3 group active:scale-95 cursor-pointer relative"
+                  >
+                    <button
+                      onClick={(e) => handleToggleBookRead(e, book.id)}
+                      className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-xs hover:scale-110 transition-all cursor-pointer shadow-xs"
+                      title={isRead ? 'Bỏ đánh dấu đã đọc' : 'Đánh dấu đã đọc'}
+                    >
+                      {isRead ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-gray-300 dark:text-gray-600 hover:text-green-500" />
+                      )}
+                    </button>
+
+                    <div className="w-full aspect-[3/4] bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-850 dark:to-gray-800 rounded-xl flex items-center justify-center group-hover:from-blue-100 group-hover:to-indigo-100 dark:group-hover:from-gray-800 dark:group-hover:to-gray-750 transition-colors shadow-inner relative">
+                      <Book className="w-10 h-10 text-blue-300 dark:text-blue-500 group-hover:text-blue-400 group-hover:scale-105 transition-all" />
+                      {isRead && (
+                        <div className="absolute inset-0 bg-black/10 dark:bg-black/30 rounded-xl flex items-center justify-center backdrop-blur-[1px]">
+                          <span className="bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Đã đọc
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="w-full text-center">
+                      <h2 className={`font-bold line-clamp-2 text-sm leading-tight ${isRead ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-800 dark:text-gray-200'}`}>
+                        {book.name}
+                      </h2>
+                      {book.updatedAt && (
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 block mt-1">
+                          {new Date(book.updatedAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </main>
