@@ -22,6 +22,8 @@ export interface QuickNote {
   id: string;
   text: string;
   timestamp: number;
+  pinned?: boolean;
+  color?: string;
 }
 
 interface AppState {
@@ -56,6 +58,7 @@ interface AppState {
   removeHighlight: (chapterId: string, highlightId: string) => void;
   addQuickNote: (note: QuickNote) => void;
   removeQuickNote: (noteId: string) => void;
+  updateQuickNote: (noteId: string, updates: Partial<QuickNote>) => void;
   toggleBookCompleted: (bookId: string) => void;
   setBookCompleted: (bookId: string, completed: boolean) => void;
   toggleChapterCompleted: (chapterId: string) => void;
@@ -169,6 +172,13 @@ export const useStore = create<AppState>((set, get) => ({
       return { quickNotes: newNotes };
     });
   },
+  updateQuickNote: (noteId, updates) => {
+    set((state) => {
+      const newNotes = state.quickNotes.map(n => n.id === noteId ? { ...n, ...updates } : n);
+      localStorage.setItem('reader_quick_notes', JSON.stringify(newNotes));
+      return { quickNotes: newNotes };
+    });
+  },
   toggleBookCompleted: (bookId) => {
     set((state) => {
       const isComp = !state.completedBooks[bookId];
@@ -265,44 +275,12 @@ export const useStore = create<AppState>((set, get) => ({
     const { token } = currentState;
     if (!token) return;
     try {
-      const cloudState = await getSyncState(token);
-      let mergedQuickNotes = [...currentState.quickNotes];
-      let mergedHighlights = { ...currentState.highlights };
-      let mergedCompletedBooks = { ...currentState.completedBooks };
-      let mergedCompletedChapters = { ...currentState.completedChapters };
-      let mergedScrollPositions = { ...currentState.scrollPositions };
-
-      if (cloudState) {
-        if (cloudState.quickNotes) {
-          const localIds = new Set(mergedQuickNotes.map(n => n.id));
-          const missingCloudNotes = cloudState.quickNotes.filter((n: any) => !localIds.has(n.id));
-          if (missingCloudNotes.length > 0) {
-            mergedQuickNotes = [...mergedQuickNotes, ...missingCloudNotes].sort((a, b) => a.timestamp - b.timestamp);
-            localStorage.setItem('reader_quick_notes', JSON.stringify(mergedQuickNotes));
-            set({ quickNotes: mergedQuickNotes });
-          }
-        }
-        
-        if (cloudState.highlights) {
-          mergedHighlights = { ...cloudState.highlights, ...mergedHighlights };
-        }
-        if (cloudState.completedBooks) {
-          mergedCompletedBooks = { ...cloudState.completedBooks, ...mergedCompletedBooks };
-        }
-        if (cloudState.completedChapters) {
-          mergedCompletedChapters = { ...cloudState.completedChapters, ...mergedCompletedChapters };
-        }
-        if (cloudState.scrollPositions) {
-          mergedScrollPositions = { ...cloudState.scrollPositions, ...mergedScrollPositions };
-        }
-      }
-
       await saveSyncState(token, {
-        scrollPositions: mergedScrollPositions,
-        highlights: mergedHighlights,
-        quickNotes: mergedQuickNotes,
-        completedBooks: mergedCompletedBooks,
-        completedChapters: mergedCompletedChapters,
+        scrollPositions: currentState.scrollPositions,
+        highlights: currentState.highlights,
+        quickNotes: currentState.quickNotes,
+        completedBooks: currentState.completedBooks,
+        completedChapters: currentState.completedChapters,
         fontSize: currentState.fontSize,
         theme: currentState.theme,
         fontFamily: currentState.fontFamily,

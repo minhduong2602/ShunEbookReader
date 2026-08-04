@@ -92,7 +92,7 @@ export default function Book() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20 transition-colors">
-      <header className="bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-10 border-b border-gray-100 dark:border-gray-800">
+      <header className="bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-40 border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-4xl mx-auto px-2 h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <button onClick={() => navigate(-1)} className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors cursor-pointer shrink-0">

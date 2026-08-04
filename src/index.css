@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 .reader-html-content p {
   margin-bottom: 1.5em;

@@ -495,6 +495,58 @@ app.post("/api/sync", async (req, res) => {
   }
 });
 
+// 7. API: Link Preview
+app.get("/api/link-preview", async (req, res) => {
+  try {
+    const url = req.query.url as string;
+    if (!url) {
+      return res.status(400).json({ error: "Missing url parameter" });
+    }
+    
+    // We can use a public metadata API or fetch and parse ourselves.
+    // Fetching directly and using simple regex/parsing
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      }
+    });
+    
+    if (!response.ok) {
+      return res.status(400).json({ error: "Failed to fetch URL" });
+    }
+    
+    const html = await response.text();
+    
+    const getMetaTag = (name: string, html: string) => {
+      const match = html.match(new RegExp(`<meta\\s+(?:name|property)=["']${name}["']\\s+content=["']([^"']+)["']`, 'i')) || 
+                    html.match(new RegExp(`<meta\\s+content=["']([^"']+)["']\\s+(?:name|property)=["']${name}["']`, 'i'));
+      return match ? match[1] : null;
+    };
+    
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    let title = titleMatch ? titleMatch[1] : url;
+    
+    // Check og:title
+    const ogTitle = getMetaTag("og:title", html);
+    if (ogTitle) title = ogTitle;
+    
+    const description = getMetaTag("og:description", html) || getMetaTag("description", html);
+    const image = getMetaTag("og:image", html);
+    const siteName = getMetaTag("og:site_name", html);
+    
+    return res.json({
+      title: title.trim(),
+      description: description ? description.trim() : null,
+      image: image ? (image.startsWith('/') ? new URL(image, url).toString() : image) : null,
+      siteName: siteName ? siteName.trim() : null,
+      url
+    });
+  } catch (err: any) {
+    console.error("Link preview error:", err);
+    return res.status(500).json({ error: "Failed to get link preview" });
+  }
+});
+
 // Vite & Static file handler
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
