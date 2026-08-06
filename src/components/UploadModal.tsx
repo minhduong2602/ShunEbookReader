@@ -186,7 +186,7 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50">
           <div className="flex items-center gap-2">
-            <Upload className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <Upload className="w-5 h-5 text-[#E06B65]" />
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
               {initialBookName ? `Thêm chương vào "${initialBookName}"` : 'Tải lên truyện mới'}
             </h2>
@@ -220,7 +220,7 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
                 <select
                   value={isCreatingNew ? '__new__' : selectedBookOption}
                   onChange={handleOptionChange}
-                  className="flex-1 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  className="flex-1 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#E06B65]/30 outline-none transition-all"
                   disabled={isUploading || loadingBooks}
                 >
                   {loadingBooks ? (
@@ -239,7 +239,7 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
 
               {isCreatingNew && (
                 <div className="space-y-1.5 animate-slide-up">
-                  <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-medium">
+                  <div className="flex items-center gap-1.5 text-xs text-[#E06B65] font-medium">
                     <Plus className="w-3.5 h-3.5" /> Nhập tên bộ truyện mới:
                   </div>
                   <input
@@ -247,7 +247,7 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
                     value={newBookName}
                     onChange={(e) => setNewBookName(e.target.value)}
                     placeholder="Ví dụ: Thần Điêu Hiệp Lữ, Harry Potter..."
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#E06B65]/30 outline-none transition-all"
                     disabled={isUploading}
                     maxLength={60}
                   />
@@ -268,7 +268,7 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
               onClick={() => !isUploading && fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[140px] ${
                 isDragging 
-                  ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20' 
+                  ? 'border-[#E06B65] bg-[#FDF3F2]/50 dark:bg-[#E06B65]/5' 
                   : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 bg-gray-50/50 dark:bg-gray-800/10'
               } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
@@ -283,7 +283,7 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
               />
               <Upload className="w-10 h-10 text-gray-400 dark:text-gray-600 mb-2" />
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Kéo & thả các chương truyện vào đây, hoặc <span className="text-blue-600 dark:text-blue-400 underline">chọn tệp</span>
+                Kéo & thả các chương truyện vào đây, hoặc <span className="text-[#E06B65] underline">chọn tệp</span>
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                 Hỗ trợ định dạng: .TXT, .DOCX, .HTML (Có thể chọn nhiều tệp)
@@ -313,7 +313,7 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
                   return (
                     <div key={file.name} className="px-4 py-2.5 flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-3">
-                        <FileText className="w-4 h-4 text-blue-500 shrink-0" />
+                        <FileText className="w-4 h-4 text-[#E06B65] shrink-0" />
                         <span className="text-gray-700 dark:text-gray-300 truncate font-medium">{file.name}</span>
                         <span className="text-xs text-gray-400 shrink-0">({(file.size / 1024).toFixed(1)} KB)</span>
                       </div>
@@ -331,7 +331,7 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
                           <span className="text-xs text-gray-400">Đang chờ...</span>
                         )}
                         {status === 'uploading' && (
-                          <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                          <Loader2 className="w-4 h-4 text-[#E06B65] animate-spin" />
                         )}
                         {status === 'success' && (
                           <span className="text-green-500 flex items-center gap-1 font-semibold text-xs">
@@ -363,7 +363,7 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
           </button>
           <button
             onClick={handleUploadSubmit}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors shadow flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2 bg-[#E06B65] hover:bg-[#C9534E] text-white font-medium rounded-lg text-sm transition-colors shadow flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isUploading || files.length === 0}
           >
             {isUploading ? (

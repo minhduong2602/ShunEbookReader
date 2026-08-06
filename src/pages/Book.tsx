@@ -91,17 +91,17 @@ export default function Book() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20 transition-colors">
-      <header className="bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-40 border-b border-gray-100 dark:border-gray-800">
+    <div className="min-h-screen bg-[#F7F5F0] pb-20">
+      <header className="bg-white shadow-sm sticky top-0 z-40 border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-2 h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <button onClick={() => navigate(-1)} className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors cursor-pointer shrink-0">
+            <button onClick={() => navigate(-1)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors cursor-pointer shrink-0">
               <ChevronLeft className="w-6 h-6" />
             </button>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white truncate flex-1 flex items-center gap-2">
+            <h1 className="text-lg font-bold text-gray-900 truncate flex-1 flex items-center gap-2">
               <span className="truncate">{bookName}</span>
               {isBookDone && (
-                <span className="bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-400 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 flex items-center gap-1">
+                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Đã đọc
                 </span>
               )}
@@ -115,7 +115,7 @@ export default function Book() {
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer ${
                 isBookDone 
                   ? 'bg-green-600 hover:bg-green-700 text-white' 
-                  : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-200'
+                  : 'bg-[#F7F5F0] hover:bg-gray-100 text-gray-700'
               }`}
             >
               <BookCheck className="w-3.5 h-3.5" />
@@ -124,7 +124,7 @@ export default function Book() {
 
             <button 
               onClick={() => setIsUploadOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#E06B65] hover:bg-[#C9534E] active:scale-95 rounded-xl transition-all shadow-sm cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Thêm chương</span>
@@ -135,13 +135,13 @@ export default function Book() {
 
       <main className="max-w-4xl mx-auto p-4 space-y-4">
         {!loading && !error && chapters.length > 0 && (
-          <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1.5 flex-1">
-              <div className="flex items-center justify-between text-xs font-semibold text-gray-600 dark:text-gray-400">
+              <div className="flex items-center justify-between text-xs font-semibold text-gray-600">
                 <span>Tiến độ đọc: {readCount} / {chapters.length} chương</span>
                 <span>{chapters.length > 0 ? Math.round((readCount / chapters.length) * 100) : 0}%</span>
               </div>
-              <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
                 <div 
                   className="bg-green-500 h-full transition-all duration-300 rounded-full"
                   style={{ width: `${chapters.length > 0 ? (readCount / chapters.length) * 100 : 0}%` }}
@@ -149,14 +149,14 @@ export default function Book() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 border-t sm:border-t-0 pt-3 sm:pt-0 border-gray-100 dark:border-gray-800 shrink-0">
-              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl text-xs">
+            <div className="flex items-center gap-2 border-t sm:border-t-0 pt-3 sm:pt-0 border-gray-100 shrink-0">
+              <div className="flex items-center gap-1 bg-[#F7F5F0] p-1 rounded-xl text-xs">
                 <button
                   onClick={() => setSortBy('newest')}
                   className={`px-2.5 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1 ${
                     sortBy === 'newest' 
-                      ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs' 
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      ? 'bg-white text-[#E06B65] shadow-xs' 
+                      : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   <ArrowUpDown className="w-3.5 h-3.5" />
@@ -166,8 +166,8 @@ export default function Book() {
                   onClick={() => setSortBy('name')}
                   className={`px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
                     sortBy === 'name' 
-                      ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs' 
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      ? 'bg-white text-[#E06B65] shadow-xs' 
+                      : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   Theo tên
@@ -197,30 +197,30 @@ export default function Book() {
         )}
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-500 dark:text-gray-400">
-            <Loader2 className="w-8 h-8 animate-spin mb-4 text-blue-600" />
+          <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+            <Loader2 className="w-8 h-8 animate-spin mb-4 text-[#E06B65]" />
             <p className="font-medium">Đang tải danh sách chương...</p>
           </div>
         ) : error ? (
-          <div className="bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 p-4 rounded-xl text-center border border-red-100 dark:border-red-950/40">
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-center border border-red-100">
             <p>{error}</p>
             <button onClick={loadChapters} className="mt-2 text-sm font-semibold hover:underline cursor-pointer">Thử lại</button>
           </div>
         ) : chapters.length === 0 ? (
-          <div className="text-center py-20 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-8 shadow-sm">
-            <FileText className="w-12 h-12 mx-auto mb-4 opacity-20 text-blue-500" />
-            <p className="font-semibold text-gray-750 dark:text-gray-200">Chưa có chương nào trong truyện</p>
+          <div className="text-center py-20 text-gray-500 bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
+            <FileText className="w-12 h-12 mx-auto mb-4 opacity-20 text-[#E06B65]" />
+            <p className="font-semibold text-gray-700">Chưa có chương nào trong truyện</p>
             <p className="text-sm text-gray-400 mt-1 mb-6">Thêm tệp chương vào thư mục truyện để bắt đầu đọc!</p>
             <button 
               onClick={() => setIsUploadOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer text-sm"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#E06B65] hover:bg-[#C9534E] text-white font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer text-sm"
             >
               <Upload className="w-4 h-4" />
               Tải lên chương
             </button>
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
             {sortedChapters.map((chapter) => {
               const isRead = completedChapters[chapter.id];
               return (
@@ -234,8 +234,8 @@ export default function Book() {
                       bookName: bookName 
                     } 
                   })}
-                  className={`w-full text-left px-5 py-3.5 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 active:bg-gray-100 dark:active:bg-gray-800/80 transition-colors cursor-pointer ${
-                    isRead ? 'opacity-75 bg-gray-50/50 dark:bg-gray-950/30' : ''
+                  className={`w-full text-left px-5 py-3.5 flex items-center gap-3 hover:bg-[#F7F5F0] active:bg-gray-100 transition-colors cursor-pointer ${
+                    isRead ? 'opacity-75 bg-[#F7F5F0]/50' : ''
                   }`}
                 >
                   <button
@@ -246,20 +246,20 @@ export default function Book() {
                     {isRead ? (
                       <CheckCircle2 className="w-5 h-5 text-green-500" />
                     ) : (
-                      <Circle className="w-5 h-5 text-gray-300 dark:text-gray-600 hover:text-green-500 dark:hover:text-green-400" />
+                      <Circle className="w-5 h-5 text-gray-300 hover:text-green-500" />
                     )}
                   </button>
 
-                  <div className={`p-2 rounded-xl shrink-0 ${isRead ? 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500' : 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400'}`}>
+                  <div className={`p-2 rounded-xl shrink-0 ${isRead ? 'bg-gray-100 text-gray-400' : 'bg-[#FDF3F2] text-[#E06B65]'}`}>
                     <FileText className="w-5 h-5" />
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <span className={`font-semibold block truncate ${isRead ? 'text-gray-500 dark:text-gray-400 line-through decoration-gray-300 dark:decoration-gray-700' : 'text-gray-800 dark:text-gray-200'}`}>
+                    <span className={`font-semibold block truncate ${isRead ? 'text-gray-400 line-through decoration-gray-300' : 'text-gray-800'}`}>
                       {formatChapterName(chapter.name)}
                     </span>
                     {chapter.updatedAt && (
-                      <span className="text-[11px] text-gray-400 dark:text-gray-500 block">
+                      <span className="text-[11px] text-gray-400 block">
                         Cập nhật: {new Date(chapter.updatedAt).toLocaleDateString()}
                       </span>
                     )}

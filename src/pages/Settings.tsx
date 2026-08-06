@@ -22,11 +22,11 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-[#F7F5F0] pb-20">
+      <header className="bg-white shadow-sm sticky top-0 z-10 border-b border-gray-200/60">
         <div className="max-w-xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate(-1)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full">
+            <button onClick={() => navigate(-1)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
               <ChevronLeft className="w-6 h-6" />
             </button>
             <h1 className="text-xl font-bold text-gray-900">Settings</h1>
@@ -48,7 +48,7 @@ export default function Settings() {
               type="text" 
               value={userName} 
               onChange={(e) => setUserName(e.target.value)}
-              className="w-full px-4 py-2 text-gray-700 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full px-4 py-2 text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#E06B65]/30 focus:border-[#E06B65] outline-none transition-all"
             />
           </div>
           <div className="text-sm text-gray-500 mt-2">
@@ -62,7 +62,7 @@ export default function Settings() {
           
           <div className="space-y-3">
             <label className="text-sm font-medium text-gray-700">Default Font Family</label>
-            <div className="flex bg-gray-100 p-1.5 rounded-xl">
+            <div className="flex bg-[#F7F5F0] p-1.5 rounded-xl">
               {[
                 { id: 'sans', label: 'Sans', fontClass: 'font-sans' },
                 { id: 'serif', label: 'Serif', fontClass: 'font-serif' },
@@ -90,7 +90,7 @@ export default function Settings() {
                 <button
                   key={t.id}
                   onClick={() => setTheme(t.id as any)}
-                  className={`py-3 rounded-xl border ${t.bg} transition-transform active:scale-95 flex flex-col items-center justify-center gap-1 ${theme === t.id ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+                  className={`py-3 rounded-xl border ${t.bg} transition-transform active:scale-95 flex flex-col items-center justify-center gap-1 ${theme === t.id ? 'ring-2 ring-[#E06B65] ring-offset-2' : ''}`}
                 >
                   <span className="text-sm font-medium">{t.label}</span>
                 </button>
@@ -106,12 +106,12 @@ export default function Settings() {
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-500">
               <p>Last synced: {lastSyncedAt ? new Date(lastSyncedAt).toLocaleString() : 'Never'}</p>
-              {isSyncing && <p className="text-blue-500">Syncing in background...</p>}
+              {isSyncing && <p className="text-[#E06B65]">Syncing in background...</p>}
             </div>
             <button 
               onClick={handleManualSync} 
               disabled={saving || isSyncing}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-[#F7F5F0] hover:bg-gray-100 text-gray-800 font-medium rounded-lg transition-colors disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sync Now'}
             </button>

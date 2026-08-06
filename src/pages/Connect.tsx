@@ -50,7 +50,7 @@ export default function Connect() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-[#F7F5F0] flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-6">
         <div className="text-center space-y-2">
           <div className="w-20 h-20 mx-auto mb-4 overflow-hidden drop-shadow-md">
@@ -78,7 +78,7 @@ export default function Connect() {
               value={localId}
               onChange={(e) => setLocalId(e.target.value)}
               placeholder="Nhập ID..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#E06B65]/30 focus:border-[#E06B65] outline-none transition-all"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleStart();
               }}
@@ -94,7 +94,7 @@ export default function Connect() {
               value={localPassword}
               onChange={(e) => setLocalPassword(e.target.value)}
               placeholder="Nhập mật khẩu..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#E06B65]/30 focus:border-[#E06B65] outline-none transition-all"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleStart();
               }}
@@ -104,7 +104,7 @@ export default function Connect() {
           <button
             onClick={handleStart}
             disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3 rounded-lg transition-colors shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
+            className="w-full bg-[#E06B65] hover:bg-[#C9534E] disabled:bg-[#E06B65]/50 text-white font-medium py-3 rounded-lg transition-colors shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
           >
             {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Đăng nhập'}
           </button>

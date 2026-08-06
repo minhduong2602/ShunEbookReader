@@ -314,7 +314,7 @@ export default function Reader() {
               {!(error.includes('không được hỗ trợ') || error.includes('not supported') || error.includes('not found')) && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); loadContent(); }} 
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors font-medium shadow-sm"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#E06B65] hover:bg-[#C9534E] text-white rounded-xl transition-colors font-medium shadow-sm"
                 >
                   <RefreshCw className="w-4 h-4" /> Try Again
                 </button>
@@ -412,7 +412,7 @@ export default function Reader() {
                 max="32"
                 value={fontSize}
                 onChange={(e) => setFontSize(Number(e.target.value))}
-                className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#E06B65]"
               />
               <span className="text-xl font-medium opacity-80">A</span>
             </div>
@@ -422,7 +422,7 @@ export default function Reader() {
           <div className="flex items-center justify-between gap-4">
             <button
               onClick={() => setTheme('light')}
-              className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border ${theme === 'light' ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'border-gray-200 dark:border-gray-700'}`}
+              className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border ${theme === 'light' ? 'border-[#E06B65] bg-[#FDF3F2] text-[#E06B65]' : 'border-gray-200 dark:border-gray-700'}`}
             >
               <Sun className="w-5 h-5" /> Light
             </button>
@@ -434,7 +434,7 @@ export default function Reader() {
             </button>
             <button
               onClick={() => setTheme('dark')}
-              className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border text-[#a6c6ff] ${theme === 'dark' ? 'border-blue-500 bg-gray-800' : 'border-gray-200 dark:border-gray-700'}`}
+              className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border ${theme === 'dark' ? 'border-[#E06B65] bg-gray-800 text-white' : 'border-gray-200 dark:border-gray-700'}`}
             >
               <Moon className="w-5 h-5" /> Dark
             </button>
@@ -460,7 +460,7 @@ export default function Reader() {
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
                 placeholder="Add a note..."
-                className="w-full bg-gray-800 text-white text-sm rounded-lg p-2 resize-none outline-none border border-gray-700 focus:border-blue-500 transition-colors"
+                className="w-full bg-gray-800 text-white text-sm rounded-lg p-2 resize-none outline-none border border-gray-700 focus:border-[#E06B65] transition-colors"
                 rows={3}
               />
               <div className="flex justify-end gap-2">
@@ -488,7 +488,7 @@ export default function Reader() {
                     setNoteText('');
                     window.getSelection()?.removeAllRanges();
                   }}
-                  className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-3 py-1.5 text-xs font-medium bg-[#E06B65] text-white rounded-lg hover:bg-[#C9534E] transition-colors"
                 >
                   Save Note
                 </button>
@@ -531,7 +531,7 @@ export default function Reader() {
       <div className={`fixed inset-y-0 right-0 w-80 bg-white dark:bg-gray-900 shadow-2xl z-[110] transform transition-transform duration-300 flex flex-col ${showHighlightsDrawer ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="h-14 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4">
           <h2 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <Bookmark className="w-4 h-4 text-blue-500" />
+            <Bookmark className="w-4 h-4 text-[#E06B65]" />
             Notes & Highlights
           </h2>
           <button onClick={() => setShowHighlightsDrawer(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
@@ -568,7 +568,7 @@ export default function Reader() {
                               setShowHighlightsDrawer(false);
                             }
                           }}
-                          className="text-blue-500 hover:text-blue-600 flex items-center gap-1"
+                          className="text-[#E06B65] hover:text-[#C9534E] flex items-center gap-1"
                         >
                           <Navigation className="w-3 h-3" /> Jump
                         </button>
@@ -601,7 +601,7 @@ export default function Reader() {
       <div className={`fixed inset-y-0 left-0 w-80 bg-white dark:bg-gray-900 shadow-2xl z-[110] transform transition-transform duration-300 flex flex-col ${showTocDrawer ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-14 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4">
           <h2 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <List className="w-4 h-4 text-blue-500" />
+            <List className="w-4 h-4 text-[#E06B65]" />
             Table of Contents
           </h2>
           <button onClick={() => setShowTocDrawer(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
