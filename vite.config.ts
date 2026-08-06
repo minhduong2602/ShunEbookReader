@@ -12,9 +12,9 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['icon.svg'],
+        includeAssets: ['icon.png'],
         manifest: {
-          name: 'Drive Reader',
+          name: 'Novel Reader',
           short_name: 'Reader',
           description: 'Read your Google Drive books',
           theme_color: '#ffffff',
@@ -22,9 +22,9 @@ export default defineConfig(({mode}) => {
           display: 'standalone',
           icons: [
             {
-              src: 'icon.svg',
+              src: 'icon.png',
               sizes: '192x192 512x512',
-              type: 'image/svg+xml',
+              type: 'image/png',
               purpose: 'any maskable'
             }
           ]

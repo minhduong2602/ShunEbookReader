@@ -53,8 +53,8 @@ export default function Connect() {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-6">
         <div className="text-center space-y-2">
-          <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="w-8 h-8 text-blue-600" />
+          <div className="w-20 h-20 mx-auto mb-4 overflow-hidden drop-shadow-md">
+            <img src="/icon.png" alt="Novel Reader Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Novel Reader</h1>
           <p className="text-gray-500 text-sm">
