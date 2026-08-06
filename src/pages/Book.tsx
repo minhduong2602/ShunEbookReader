@@ -234,7 +234,7 @@ export default function Book() {
                       bookName: bookName 
                     } 
                   })}
-                  className={`w-full text-left px-5 py-3.5 flex items-center gap-3 hover:bg-[#F7F5F0] active:bg-gray-100 transition-colors cursor-pointer ${
+                  className={`w-full text-left px-5 py-3.5 flex items-center gap-3 min-h-[64px] hover:bg-[#F7F5F0] active:bg-gray-100 transition-colors cursor-pointer ${
                     isRead ? 'opacity-75 bg-[#F7F5F0]/50' : ''
                   }`}
                 >
@@ -255,7 +255,7 @@ export default function Book() {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <span className={`font-semibold block truncate ${isRead ? 'text-gray-400 line-through decoration-gray-300' : 'text-gray-800'}`}>
+                    <span className={`font-semibold block line-clamp-2 leading-snug ${isRead ? 'text-gray-400 line-through decoration-gray-300' : 'text-gray-800'}`}>
                       {formatChapterName(chapter.name)}
                     </span>
                     {chapter.updatedAt && (
@@ -266,7 +266,7 @@ export default function Book() {
                   </div>
 
                   {isRead && (
-                    <span className="text-[11px] font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/40 px-2 py-0.5 rounded-md shrink-0">
+                    <span className="text-[11px] font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-md shrink-0">
                       Đã đọc
                     </span>
                   )}
