@@ -57,33 +57,28 @@ function LinkPreview({ url }: { url: string }) {
 export default function NotesTab() {
   const { quickNotes, addQuickNote, removeQuickNote, updateQuickNote, triggerSyncToDrive } = useStore();
   const [text, setText] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
+      const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll when new note is added and not searching
   useEffect(() => {
-    if (!searchQuery && !editingId) {
+    if (!editingId) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [quickNotes.length, searchQuery, editingId]);
+  }, [quickNotes.length, editingId]);
 
   // Filtering and sorting
   const filteredNotes = useMemo(() => {
     let filtered = quickNotes;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(n => n.text.toLowerCase().includes(q));
-    }
     // Sort: pinned first, then chronological
     return [...filtered].sort((a, b) => {
       if (a.pinned && !b.pinned) return -1;
       if (!a.pinned && b.pinned) return 1;
       return a.timestamp - b.timestamp;
     });
-  }, [quickNotes, searchQuery]);
+  }, [quickNotes]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,42 +134,29 @@ export default function NotesTab() {
   };
 
   const colors = [
-    { name: 'Blue', value: 'bg-blue-600' },
-    { name: 'Purple', value: 'bg-purple-600' },
-    { name: 'Emerald', value: 'bg-emerald-600' },
-    { name: 'Orange', value: 'bg-orange-600' },
-    { name: 'Rose', value: 'bg-rose-600' },
-    { name: 'Slate', value: 'bg-slate-700' },
+    { name: 'Coral', value: 'bg-[#E06B65]' },
+    { name: 'Sage', value: 'bg-[#5B8C7B]' },
+    { name: 'Slate', value: 'bg-[#7B95B1]' },
+    { name: 'Golden', value: 'bg-[#D1A054]' },
+    { name: 'Mauve', value: 'bg-[#9F838C]' },
+    { name: 'Olive', value: 'bg-[#4A5D23]' },
   ];
 
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] w-full -mb-4">
-      {/* Search Header */}
-      <div className="p-3 px-4 border-b border-gray-100 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm sticky top-0 z-10 flex items-center gap-2">
-        <div className="relative flex-1 max-w-md mx-auto">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search notes..."
-            className="w-full bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:text-gray-100 placeholder-gray-400"
-          />
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {filteredNotes.length === 0 ? (
-          <div className="text-center py-20 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-8 shadow-sm">
+          <div className="text-center py-20 text-gray-500 bg-white/50 border border-white/60 rounded-3xl p-8 shadow-sm">
             <p className="font-medium text-gray-600 dark:text-gray-300">
-              {searchQuery ? "No notes found matching your search." : "No notes yet."}
+              "No notes yet."
             </p>
-            {!searchQuery && <p className="text-sm text-gray-400 mt-1">Start typing below to add a quick note!</p>}
+            <p className="text-sm text-gray-400 mt-1">Start typing below to add a quick note!</p>
           </div>
         ) : (
           filteredNotes.map((note, index) => {
             const isEditing = editingId === note.id;
-            const bgClass = note.color || 'bg-blue-600';
+            const oldColors: Record<string, string> = { 'bg-blue-600': 'bg-[#E06B65]', 'bg-purple-600': 'bg-[#9F838C]', 'bg-emerald-600': 'bg-[#5B8C7B]', 'bg-orange-600': 'bg-[#D1A054]', 'bg-rose-600': 'bg-[#E06B65]', 'bg-slate-700': 'bg-[#7B95B1]' };
+            const bgClass = oldColors[note.color || ''] || note.color || 'bg-[#E06B65]';
             const links = getLinks(note.text);
             const showPinDivider = index > 0 && filteredNotes[index - 1].pinned && !note.pinned;
 
@@ -182,9 +164,9 @@ export default function NotesTab() {
               <React.Fragment key={note.id}>
                 {showPinDivider && (
                   <div className="flex items-center gap-4 my-6 opacity-60">
-                    <div className="h-px bg-gray-300 dark:bg-gray-700 flex-1"></div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Unpinned Notes</span>
-                    <div className="h-px bg-gray-300 dark:bg-gray-700 flex-1"></div>
+                    <div className="h-px bg-gray-200 flex-1"></div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Unpinned Notes</span>
+                    <div className="h-px bg-gray-200 flex-1"></div>
                   </div>
                 )}
                 <div className="flex justify-end">
@@ -240,12 +222,12 @@ export default function NotesTab() {
                               <button className="p-1.5 hover:bg-black/20 rounded-lg transition-colors" title="Change Color">
                                 <Palette className="w-3.5 h-3.5 opacity-90" />
                               </button>
-                              <div className="absolute bottom-full right-0 mb-1 hidden group-hover/color:flex bg-white dark:bg-gray-800 p-2 rounded-xl shadow-xl gap-1.5 border border-gray-100 dark:border-gray-700 z-20">
+                              <div className="absolute bottom-full right-0 mb-1 hidden group-hover/color:flex bg-white p-2 rounded-xl shadow-xl gap-1.5 border border-gray-100 border-gray-100 z-20">
                                 {colors.map(c => (
                                   <button
                                     key={c.value}
                                     onClick={() => changeColor(note.id, c.value)}
-                                    className={`w-6 h-6 rounded-full ${c.value} border-2 ${bgClass === c.value ? 'border-gray-900 dark:border-white shadow-inner' : 'border-transparent hover:scale-110'} transition-transform`}
+                                    className={`w-6 h-6 rounded-full ${c.value} border-2 ${bgClass === c.value ? 'border-gray-900 border-gray-900 shadow-inner' : 'border-transparent hover:scale-110'} transition-transform`}
                                     title={c.name}
                                   />
                                 ))}
@@ -296,7 +278,7 @@ export default function NotesTab() {
         <div ref={bottomRef} />
       </div>
 
-      <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
+      <div className="p-4 bg-transparent border-t border-gray-200/60 mt-4">
         <form onSubmit={handleSubmit} className="flex gap-2 max-w-4xl mx-auto items-end">
           <textarea
             value={text}
@@ -308,13 +290,13 @@ export default function NotesTab() {
               }
             }}
             placeholder="Type a quick note or paste a link... (Shift+Enter for newline)"
-            className="flex-1 bg-gray-100 dark:bg-gray-800 border-none rounded-xl px-5 py-3.5 text-sm focus:ring-2 focus:ring-blue-500 dark:text-gray-100 placeholder-gray-500 shadow-inner resize-none min-h-[50px] max-h-[150px]"
+            className="flex-1 bg-white border border-gray-100 rounded-2xl px-5 py-3.5 text-sm focus:ring-2 focus:ring-[#E06B65]/30 placeholder-gray-500 shadow-sm resize-none min-h-[50px] max-h-[150px] outline-none"
             rows={1}
           />
           <button
             type="submit"
             disabled={!text.trim()}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 text-white rounded-xl p-3.5 transition-colors shrink-0 shadow-sm flex items-center justify-center h-[50px]"
+            className="bg-[#E06B65] hover:bg-[#C9534E] disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl p-3.5 transition-colors shrink-0 shadow-sm flex items-center justify-center h-[50px]"
           >
             <Send className="w-5 h-5 ml-0.5" />
           </button>
