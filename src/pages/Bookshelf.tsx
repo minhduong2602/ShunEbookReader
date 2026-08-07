@@ -12,7 +12,6 @@ import { getFolders, DriveFile } from '../lib/drive';
 import UploadModal from '../components/UploadModal';
 import NotesTab from '../components/NotesTab';
 import BookCoverCard from '../components/BookCoverCard';
-import CategoryRail from '../components/CategoryRail';
 import DesktopChatPanel from '../components/DesktopChatPanel';
 import HomeSectionManager from '../components/HomeSectionManager';
 import FilterBar, { SortOption, ShelfFilter } from '../components/FilterBar';
@@ -294,12 +293,6 @@ export default function Bookshelf() {
             </div>
           </div>
 
-          {/* Category Rail */}
-          <CategoryRail 
-            selectedCategory={selectedCategory}
-            onSelectCategory={(id) => setSelectedCategory(id)}
-          />
-
           {/* TAB 1: HOME */}
           {activeTab === 'home' && (
             <div className="space-y-8 animate-fade-in">
@@ -431,17 +424,21 @@ export default function Bookshelf() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                    {sortedBooks.map((book) => (
-                      <BookCoverCard
-                        key={book.id}
-                        id={book.id}
-                        title={book.name}
-                        author={book.updatedAt ? new Date(book.updatedAt).toLocaleDateString('vi-VN') : 'Sách sưu tầm'}
-                        isCompleted={completedBooks[book.id]}
-                        onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
-                        onToggleCompleted={(e) => handleToggleBookRead(e, book.id)}
-                      />
-                    ))}
+                    {sortedBooks.map((book) => {
+                      const meta = bookMetadata[book.id];
+                      return (
+                        <BookCoverCard
+                          key={book.id}
+                          id={book.id}
+                          title={meta?.customName || book.name}
+                          author={meta?.author || (book.updatedAt ? new Date(book.updatedAt).toLocaleDateString('vi-VN') : 'Sách sưu tầm')}
+                          coverImage={meta?.coverImage}
+                          isCompleted={completedBooks[book.id]}
+                          onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
+                          onToggleCompleted={(e) => handleToggleBookRead(e, book.id)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -505,51 +502,62 @@ export default function Bookshelf() {
                 </div>
               ) : bookshelfLayout === 'list' ? (
                 <div className="space-y-2">
-                  {sortedBooks.map((book) => (
-                    <div
-                      key={book.id}
-                      onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
-                      className="flex items-center gap-4 bg-white p-3 rounded-2xl border border-[#EFE6D8] shadow-chip hover:shadow-md hover:border-[#E8604F]/20 transition-all cursor-pointer group"
-                    >
-                      <div className="w-10 h-14 rounded-xl bg-gradient-to-br from-[#E8604F] to-[#EDB65B] shrink-0 flex items-center justify-center text-white text-xs font-bold">
-                        {book.name.charAt(0)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-[#3D2B1F] group-hover:text-[#E8604F] transition-colors truncate">{book.name}</p>
-                        <p className="text-xs text-[#6B5645]">{book.updatedAt ? new Date(book.updatedAt).toLocaleDateString('vi-VN') : 'Sách sưu tầm'}</p>
-                        {bookCollections[book.id] && <span className="text-[10px] font-bold text-[#8D7FC4]">{bookCollections[book.id]}</span>}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {bookMetadata[book.id]?.rating > 0 && (
-                          <span className="text-[10px] font-bold text-[#EDB65B]">{'★'.repeat(bookMetadata[book.id].rating)}</span>
+                  {sortedBooks.map((book) => {
+                    const meta = bookMetadata[book.id];
+                    return (
+                      <div
+                        key={book.id}
+                        onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
+                        className="flex items-center gap-4 bg-white p-3 rounded-2xl border border-[#EFE6D8] shadow-chip hover:shadow-md hover:border-[#E8604F]/20 transition-all cursor-pointer group"
+                      >
+                        {meta?.coverImage ? (
+                          <img src={meta.coverImage} alt={book.name} className="w-10 h-14 rounded-xl object-cover shrink-0 shadow-xs" />
+                        ) : (
+                          <div className="w-10 h-14 rounded-xl bg-gradient-to-br from-[#E8604F] to-[#EDB65B] shrink-0 flex items-center justify-center text-white text-xs font-bold">
+                            {book.name.charAt(0)}
+                          </div>
                         )}
-                        <button onClick={(e) => handleToggleBookRead(e, book.id)} className="p-1">
-                          {completedBooks[book.id]
-                            ? <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                            : <Circle className="w-4 h-4 text-[#ADADAD]" />}
-                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm text-[#3D2B1F] group-hover:text-[#E8604F] transition-colors truncate">{meta?.customName || book.name}</p>
+                          <p className="text-xs text-[#6B5645]">{meta?.author || (book.updatedAt ? new Date(book.updatedAt).toLocaleDateString('vi-VN') : 'Sách sưu tầm')}</p>
+                          {bookCollections[book.id] && <span className="text-[10px] font-bold text-[#8D7FC4]">{bookCollections[book.id]}</span>}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {bookMetadata[book.id]?.rating > 0 && (
+                            <span className="text-[10px] font-bold text-[#EDB65B]">{'★'.repeat(bookMetadata[book.id].rating)}</span>
+                          )}
+                          <button onClick={(e) => handleToggleBookRead(e, book.id)} className="p-1">
+                            {completedBooks[book.id]
+                              ? <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                              : <Circle className="w-4 h-4 text-[#ADADAD]" />}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className={`grid gap-4 sm:gap-6 ${bookshelfLayout === 'compact'
                   ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6'
                   : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'}`}>
-                  {sortedBooks.map((book) => (
-                    <BookCoverCard
-                      key={book.id}
-                      id={book.id}
-                      title={book.name}
-                      author={book.updatedAt ? new Date(book.updatedAt).toLocaleDateString('vi-VN') : 'Sách sưu tầm'}
-                      isCompleted={completedBooks[book.id]}
-                      shelf={bookCollections[book.id] || null}
-                      rating={bookMetadata[book.id]?.rating || 0}
-                      size={bookshelfLayout === 'compact' ? 'sm' : 'md'}
-                      onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
-                      onToggleCompleted={(e) => handleToggleBookRead(e, book.id)}
-                    />
-                  ))}
+                  {sortedBooks.map((book) => {
+                    const meta = bookMetadata[book.id];
+                    return (
+                      <BookCoverCard
+                        key={book.id}
+                        id={book.id}
+                        title={meta?.customName || book.name}
+                        author={meta?.author || (book.updatedAt ? new Date(book.updatedAt).toLocaleDateString('vi-VN') : 'Sách sưu tầm')}
+                        coverImage={meta?.coverImage}
+                        isCompleted={completedBooks[book.id]}
+                        shelf={bookCollections[book.id] || null}
+                        rating={meta?.rating || 0}
+                        size={bookshelfLayout === 'compact' ? 'sm' : 'md'}
+                        onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
+                        onToggleCompleted={(e) => handleToggleBookRead(e, book.id)}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>

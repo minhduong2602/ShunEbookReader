@@ -1,6 +1,6 @@
 import { useState, useEffect, MouseEvent } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ChevronLeft, FileText, Loader2, Upload, CheckCircle2, Circle, ArrowUpDown, CheckCheck, BookCheck, Sparkles, Star, Tag, BookOpen, X } from 'lucide-react';
+import { ChevronLeft, FileText, Loader2, Upload, CheckCircle2, Circle, ArrowUpDown, CheckCheck, BookCheck, Sparkles, Star, Tag, BookOpen, X, Edit3, Image, UploadCloud, RotateCcw, Save } from 'lucide-react';
 import { useStore, BookShelf } from '../store';
 import { getFiles, DriveFile } from '../lib/drive';
 import { formatChapterName } from '../lib/utils';
@@ -35,10 +35,10 @@ export default function Book() {
     localStorage.setItem('reader_book_sort_by', sortBy);
   }, [sortBy]);
   
-  // Upload modal state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [showReview, setShowReview] = useState(false);
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
 
   const bookId = id || '';
   const bookName = location.state?.bookName || decodeURIComponent(id || 'Book Chapters');
@@ -148,27 +148,36 @@ export default function Book() {
         <div className="bg-white rounded-[24px] p-6 border border-[#EFE6D8] shadow-chip flex flex-col sm:flex-row items-center sm:items-start gap-6">
           <BookCoverCard 
             id={bookId}
-            title={bookName}
-            author="Sách sưu tầm"
+            title={bookMetadata[bookId]?.customName || bookName}
+            author={bookMetadata[bookId]?.author || "Sách sưu tầm"}
+            coverImage={bookMetadata[bookId]?.coverImage}
             isCompleted={isBookDone}
             size="lg"
           />
 
           <div className="flex-1 text-center sm:text-left space-y-3 pt-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#E8604F] bg-[#E8604F]/10 px-3 py-1 rounded-full">
-              Thư mục bộ truyện
-            </span>
+            <div className="flex items-center justify-center sm:justify-between flex-wrap gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#E8604F] bg-[#E8604F]/10 px-3 py-1 rounded-full">
+                Thư mục bộ truyện
+              </span>
+              <button
+                onClick={() => setIsEditingInfo(e => !e)}
+                className="flex items-center gap-1.5 px-3 py-1 bg-[#F0E7D8] hover:bg-[#E4D9C8] text-[#3D2B1F] rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-[#E8604F]" /> {isEditingInfo ? 'Đóng chỉnh sửa' : 'Sửa thông tin sách'}
+              </button>
+            </div>
 
             <h1 className="font-display font-bold text-2xl sm:text-3xl text-[#3D2B1F] leading-tight">
-              {bookName}
+              {bookMetadata[bookId]?.customName || bookName}
             </h1>
 
             <p className="text-xs sm:text-sm text-[#B54B3C] font-semibold">
-              Tác giả: Sách sưu tầm
+              Tác giả: {bookMetadata[bookId]?.author || "Sách sưu tầm"}
             </p>
 
             <p className="text-xs sm:text-sm text-[#6B5645] leading-relaxed">
-              Tổng cộng {chapters.length} chương truyện. Được lưu trữ đầm ấm trên hệ thống Cozy Shelf.
+              {bookMetadata[bookId]?.description || `Tổng cộng ${chapters.length} chương truyện. Được lưu trữ đầm ấm trên hệ thống Cozy Shelf.`}
             </p>
 
             {/* Read Count Summary */}
@@ -182,6 +191,104 @@ export default function Book() {
             </div>
           </div>
         </div>
+
+        {/* Customization Form Modal / Inline Drawer */}
+        {isEditingInfo && (
+          <div className="bg-[#F9F5EE] rounded-[24px] p-6 border border-[#EFE6D8] shadow-chip space-y-4 animate-fade-in">
+            <h2 className="font-display text-base font-bold text-[#3D2B1F] flex items-center gap-2 border-b border-[#EFE6D8] pb-2">
+              <Edit3 className="w-4 h-4 text-[#E8604F]" /> Tùy chỉnh chi tiết cuốn sách
+            </h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Custom Title */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#6B5645] uppercase tracking-wider">Tên sách hiển thị</label>
+                <input
+                  type="text"
+                  placeholder={bookName}
+                  value={bookMetadata[bookId]?.customName || ''}
+                  onChange={(e) => setBookMetadata(bookId, { customName: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-white border border-[#EFE6D8] rounded-xl text-sm font-medium text-[#3D2B1F] outline-none focus:ring-2 focus:ring-[#E8604F]/30"
+                />
+              </div>
+
+              {/* Author */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#6B5645] uppercase tracking-wider">Tác giả</label>
+                <input
+                  type="text"
+                  placeholder="Nhập tên tác giả..."
+                  value={bookMetadata[bookId]?.author || ''}
+                  onChange={(e) => setBookMetadata(bookId, { author: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-white border border-[#EFE6D8] rounded-xl text-sm font-medium text-[#3D2B1F] outline-none focus:ring-2 focus:ring-[#E8604F]/30"
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[#6B5645] uppercase tracking-wider">Giới thiệu / Mô tả bộ truyện</label>
+              <textarea
+                placeholder="Nhập tóm tắt, mô tả nội dung cuốn sách..."
+                value={bookMetadata[bookId]?.description || ''}
+                onChange={(e) => setBookMetadata(bookId, { description: e.target.value })}
+                rows={3}
+                className="w-full px-4 py-2.5 bg-white border border-[#EFE6D8] rounded-xl text-sm font-medium text-[#3D2B1F] outline-none focus:ring-2 focus:ring-[#E8604F]/30 resize-none"
+              />
+            </div>
+
+            {/* Cover Image Upload */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[#6B5645] uppercase tracking-wider flex items-center gap-1">
+                <Image className="w-3.5 h-3.5" /> Ảnh bìa sách tùy chỉnh
+              </label>
+
+              <div className="flex items-center gap-3 flex-wrap pt-1">
+                <label className="flex items-center gap-2 px-4 py-2.5 bg-[#E8604F] hover:bg-[#D6503F] text-white text-xs font-bold rounded-xl transition-all shadow-chip cursor-pointer">
+                  <UploadCloud className="w-4 h-4" /> Chọn ảnh bìa từ máy
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (evt) => {
+                        const base64 = evt.target?.result as string;
+                        if (base64) {
+                          setBookMetadata(bookId, { coverImage: base64 });
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </label>
+
+                {bookMetadata[bookId]?.coverImage && (
+                  <button
+                    onClick={() => setBookMetadata(bookId, { coverImage: '' })}
+                    className="flex items-center gap-1.5 px-3 py-2.5 bg-red-50 text-[#B54B3C] hover:bg-red-100 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" /> Xóa ảnh bìa tùy chỉnh
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => {
+                  triggerSyncToDrive().catch(console.error);
+                  setIsEditingInfo(false);
+                }}
+                className="px-6 py-2.5 bg-[#E8604F] text-white text-xs font-bold rounded-full shadow-chip hover:bg-[#D6503F] active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" /> Lưu thông tin
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Phase 2: Book Metadata Panel */}
         <div className="bg-white rounded-[24px] p-5 border border-[#EFE6D8] shadow-chip space-y-4">

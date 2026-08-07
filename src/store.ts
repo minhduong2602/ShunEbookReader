@@ -41,6 +41,10 @@ export interface BookMetadata {
   rating: number;      // 0–5
   tags: string[];
   review: string;
+  customName?: string;
+  author?: string;
+  description?: string;
+  coverImage?: string;
 }
 
 export type BookShelf = 'reading' | 'completed' | 'dropped' | 'want';
