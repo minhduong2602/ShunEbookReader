@@ -116,3 +116,31 @@
 .animate-slide-left {
   animation: slideLeft 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
+
+/* ─── Reader Theme Color Inheritance ─────────────────────────────────── */
+.reader-content-wrapper,
+.reader-content-wrapper p,
+.reader-content-wrapper h1,
+.reader-content-wrapper h2,
+.reader-content-wrapper h3,
+.reader-content-wrapper h4,
+.reader-content-wrapper h5,
+.reader-content-wrapper h6,
+.reader-content-wrapper span,
+.reader-content-wrapper li,
+.reader-content-wrapper strong,
+.reader-content-wrapper em,
+.reader-content-wrapper b,
+.reader-content-wrapper i,
+.reader-html-content,
+.reader-html-content * {
+  color: inherit !important;
+}
+
+.prose.reader-content-wrapper {
+  --tw-prose-body: inherit;
+  --tw-prose-headings: inherit;
+  --tw-prose-bold: inherit;
+  --tw-prose-links: inherit;
+}
+

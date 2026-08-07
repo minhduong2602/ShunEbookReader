@@ -283,7 +283,10 @@ export default function Reader() {
       style={currentStyle}
     >
       {/* Top Bar Overlay */}
-      <div className={`fixed top-0 inset-x-0 bg-[#FBF6EC]/95 dark:bg-[#0F0F0F]/95 backdrop-blur-md shadow-chip z-50 transition-transform duration-300 ${showControls && !isFocusMode ? 'translate-y-0' : '-translate-y-full'} border-b border-[#EFE6D8] dark:border-[#222222]`}>
+      <div 
+        className={`fixed top-0 inset-x-0 backdrop-blur-md shadow-chip z-50 transition-transform duration-300 ${showControls && !isFocusMode ? 'translate-y-0' : '-translate-y-full'} border-b border-current/15 ${activeCustomTheme ? '' : 'bg-[#FBF6EC]/95 dark:bg-[#0F0F0F]/95'}`}
+        style={activeCustomTheme ? { backgroundColor: activeCustomTheme.surface, color: activeCustomTheme.text } : undefined}
+      >
         <div className="max-w-3xl mx-auto px-3 h-14 flex items-center gap-2">
           <button onClick={() => navigate(-1)} className="p-2 rounded-full text-[#3D2B1F] dark:text-[#ADADAD] hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
             <ChevronLeft className="w-6 h-6" />
@@ -377,11 +380,11 @@ export default function Reader() {
           </div>
         ) : (
           <div
-            className={`prose prose-lg max-w-none ${fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans'}`}
+            className={`prose prose-lg max-w-none reader-content-wrapper ${fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans'}`}
             style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
           >
             {/* Chapter Header */}
-            <h1 className="font-display text-center font-bold mb-10 pb-4 border-b border-[#EFE6D8] dark:border-[#222222] text-[#3D2B1F] dark:text-[#ADADAD]" style={{ fontSize: `${Math.max(22, fontSize * 1.3)}px`, lineHeight: 1.4 }}>
+            <h1 className="font-display text-center font-bold mb-10 pb-4 border-b border-current/20" style={{ fontSize: `${Math.max(22, fontSize * 1.3)}px`, lineHeight: 1.4 }}>
               {chapterName}
             </h1>
             
@@ -431,7 +434,10 @@ export default function Reader() {
       </div>
 
       {/* Bottom Controls Overlay */}
-      <div className={`fixed bottom-0 inset-x-0 bg-white/95 dark:bg-[#0F0F0F]/95 backdrop-blur-md shadow-chip border-t border-[#EFE6D8] dark:border-[#222222] z-50 transition-transform duration-300 pb-safe ${showControls ? 'translate-y-0' : 'translate-y-full'}`}>
+      <div 
+        className={`fixed bottom-0 inset-x-0 backdrop-blur-md shadow-chip border-t border-current/15 z-50 transition-transform duration-300 pb-safe ${showControls ? 'translate-y-0' : 'translate-y-full'} ${activeCustomTheme ? '' : 'bg-white/95 dark:bg-[#0F0F0F]/95'}`}
+        style={activeCustomTheme ? { backgroundColor: activeCustomTheme.surface, color: activeCustomTheme.text } : undefined}
+      >
         <div className="max-w-3xl mx-auto p-4 space-y-5">
           
           {/* Font Controls */}
