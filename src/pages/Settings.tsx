@@ -66,6 +66,7 @@ export default function Settings() {
   const handleSaveTheme = () => {
     if (!editingTheme.name.trim()) return;
     saveCustomTheme(editingTheme);
+    setTheme(editingTheme.id);
     setShowThemeEditor(false);
   };
 
@@ -205,14 +206,22 @@ export default function Settings() {
               <p className="text-xs opacity-70 mt-1">Tạo theme với màu nền, chữ và accent của riêng bạn.</p>
             </div>
           ) : (
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-4 flex-wrap">
               {customThemes.map(t => (
-                <ThemePreview
-                  key={t.id}
-                  theme={t}
-                  onSelect={() => openEditThemeEditor(t)}
-                  onDelete={() => deleteCustomTheme(t.id)}
-                />
+                <div key={t.id} className="flex flex-col items-center">
+                  <ThemePreview
+                    theme={t}
+                    isActive={theme === t.id}
+                    onSelect={() => setTheme(t.id)}
+                    onDelete={() => deleteCustomTheme(t.id)}
+                  />
+                  <button
+                    onClick={() => openEditThemeEditor(t)}
+                    className="mt-1.5 text-[11px] font-bold text-[#E8604F] hover:underline cursor-pointer"
+                  >
+                    ✏️ Sửa
+                  </button>
+                </div>
               ))}
             </div>
           )}

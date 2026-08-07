@@ -37,7 +37,7 @@ export default function Reader() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { token, logout, fontSize, theme, fontFamily, setFontFamily, setFontSize, setTheme, currentBookChapters, scrollPositions, setScrollPosition, addHighlight, highlights, removeHighlight, updateReadHistory, setChapterCompleted, triggerSyncToDrive, readerTexture, setReaderTexture } = useStore();
+  const { token, logout, fontSize, theme, fontFamily, setFontFamily, setFontSize, setTheme, currentBookChapters, scrollPositions, setScrollPosition, addHighlight, highlights, removeHighlight, updateReadHistory, setChapterCompleted, triggerSyncToDrive, readerTexture, setReaderTexture, customThemes } = useStore();
 
   const [content, setContent] = useState('');
   const [processedContent, setProcessedContent] = useState('');
@@ -68,12 +68,11 @@ export default function Reader() {
   const prevChapter = currentIndex > 0 ? currentBookChapters[currentIndex - 1] : null;
   const nextChapter = currentIndex !== -1 && currentIndex < currentBookChapters.length - 1 ? currentBookChapters[currentIndex + 1] : null;
 
-  const THEMES: Array<'light' | 'dark' | 'sepia'> = ['light', 'sepia', 'dark'];
-
   const cycleTheme = useCallback(() => {
-    const idx = THEMES.indexOf(theme);
-    setTheme(THEMES[(idx + 1) % THEMES.length]);
-  }, [theme, setTheme]);
+    const allThemeIds = ['light', 'sepia', 'dark', ...customThemes.map(t => t.id)];
+    const idx = allThemeIds.indexOf(theme);
+    setTheme(allThemeIds[(idx + 1) % allThemeIds.length]);
+  }, [theme, setTheme, customThemes]);
 
   const goToPrevChapter = useCallback(() => {
     if (prevChapter) navigate(`/read/${prevChapter.id}`, { state: { chapterName: prevChapter.name, mimeType: prevChapter.mimeType, bookId, bookName } });
@@ -267,14 +266,22 @@ export default function Reader() {
     }
   };
 
-  const themeClasses = {
+  const themeClasses: Record<string, string> = {
     light: 'bg-[#FBF6EC] text-[#3D2B1F]',
     dark: 'bg-[#0F0F0F] text-[#ADADAD]',
     sepia: 'bg-[#F4ECD8] text-[#5B4636]',
   };
 
+  const activeCustomTheme = customThemes.find(t => t.id === theme);
+  const currentStyle = activeCustomTheme
+    ? { backgroundColor: activeCustomTheme.bg, color: activeCustomTheme.text }
+    : undefined;
+
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${themeClasses[theme]} font-sans ${readerTexture !== 'none' ? `texture-${readerTexture}` : ''}`}>
+    <div 
+      className={`min-h-screen transition-colors duration-300 ${activeCustomTheme ? '' : (themeClasses[theme] || themeClasses.light)} font-sans ${readerTexture !== 'none' ? `texture-${readerTexture}` : ''}`}
+      style={currentStyle}
+    >
       {/* Top Bar Overlay */}
       <div className={`fixed top-0 inset-x-0 bg-[#FBF6EC]/95 dark:bg-[#0F0F0F]/95 backdrop-blur-md shadow-chip z-50 transition-transform duration-300 ${showControls && !isFocusMode ? 'translate-y-0' : '-translate-y-full'} border-b border-[#EFE6D8] dark:border-[#222222]`}>
         <div className="max-w-3xl mx-auto px-3 h-14 flex items-center gap-2">
@@ -460,25 +467,44 @@ export default function Reader() {
           </div>
 
           {/* Theme Selection */}
-          <div className="flex items-center justify-between gap-3">
-            <button
-              onClick={() => setTheme('light')}
-              className={`flex-1 py-2.5 rounded-full flex items-center justify-center gap-2 text-xs font-bold border transition-all cursor-pointer ${theme === 'light' ? 'border-[#E8604F] bg-[#E8604F]/10 text-[#E8604F]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
-            >
-              <Sun className="w-4 h-4" /> Cozy Paper
-            </button>
-            <button
-              onClick={() => setTheme('sepia')}
-              className={`flex-1 py-2.5 rounded-full flex items-center justify-center gap-2 text-xs font-bold border transition-all cursor-pointer ${theme === 'sepia' ? 'border-[#8B6B4A] bg-[#F4ECD8] text-[#5B4636]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
-            >
-              <Coffee className="w-4 h-4" /> Sepia
-            </button>
-            <button
-              onClick={() => setTheme('dark')}
-              className={`flex-1 py-2.5 rounded-full flex items-center justify-center gap-2 text-xs font-bold border transition-all cursor-pointer ${theme === 'dark' ? 'border-[#E8604F] bg-[#0F0F0F] text-[#ADADAD]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
-            >
-              <Moon className="w-4 h-4" /> Night
-            </button>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pb-0.5">
+              <button
+                onClick={() => setTheme('light')}
+                className={`flex-1 py-2.5 px-3 rounded-full flex items-center justify-center gap-1.5 text-xs font-bold border transition-all cursor-pointer whitespace-nowrap ${theme === 'light' ? 'border-[#E8604F] bg-[#E8604F]/10 text-[#E8604F]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
+              >
+                <Sun className="w-3.5 h-3.5" /> Cozy Paper
+              </button>
+              <button
+                onClick={() => setTheme('sepia')}
+                className={`flex-1 py-2.5 px-3 rounded-full flex items-center justify-center gap-1.5 text-xs font-bold border transition-all cursor-pointer whitespace-nowrap ${theme === 'sepia' ? 'border-[#8B6B4A] bg-[#F4ECD8] text-[#5B4636]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
+              >
+                <Coffee className="w-3.5 h-3.5" /> Sepia
+              </button>
+              <button
+                onClick={() => setTheme('dark')}
+                className={`flex-1 py-2.5 px-3 rounded-full flex items-center justify-center gap-1.5 text-xs font-bold border transition-all cursor-pointer whitespace-nowrap ${theme === 'dark' ? 'border-[#E8604F] bg-[#0F0F0F] text-[#ADADAD]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
+              >
+                <Moon className="w-3.5 h-3.5" /> Night
+              </button>
+            </div>
+
+            {/* Custom Themes list */}
+            {customThemes.length > 0 && (
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 shrink-0">Tùy chỉnh:</span>
+                {customThemes.map(ct => (
+                  <button
+                    key={ct.id}
+                    onClick={() => setTheme(ct.id)}
+                    style={{ backgroundColor: ct.bg, color: ct.text, borderColor: ct.accent }}
+                    className={`px-3 py-1 rounded-full text-xs font-bold border-2 transition-all cursor-pointer shrink-0 ${theme === ct.id ? 'ring-2 ring-[#E8604F] scale-105 shadow-chip' : 'opacity-80 hover:opacity-100'}`}
+                  >
+                    🎨 {ct.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Texture + Focus Mode */}

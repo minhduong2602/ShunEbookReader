@@ -65,7 +65,7 @@ interface AppState {
   folderId: string | null;
   clientId: string | null;
   fontSize: number;
-  theme: 'light' | 'dark' | 'sepia';
+  theme: string;
   fontFamily: 'sans' | 'serif' | 'mono';
   userName: string;
   readHistory: ReadHistoryEntry[];
@@ -93,7 +93,7 @@ interface AppState {
   setFolderId: (id: string) => void;
   setClientId: (id: string) => void;
   setFontSize: (size: number) => void;
-  setTheme: (theme: 'light' | 'dark' | 'sepia') => void;
+  setTheme: (theme: string) => void;
   setFontFamily: (font: 'sans' | 'serif' | 'mono') => void;
   setUserName: (name: string) => void;
   updateReadHistory: (entry: Pick<ReadHistoryEntry, 'bookId' | 'bookName'> & Partial<ReadHistoryEntry>) => void;
