@@ -86,6 +86,27 @@ export default function Bookshelf() {
     navigate('/', { replace: true });
   };
 
+  const getBookMeta = (bookId: string, bookName?: string) => {
+    if (!bookMetadata) return undefined;
+    return bookMetadata[bookId] 
+      || (bookName ? bookMetadata[bookName] : undefined)
+      || bookMetadata[encodeURIComponent(bookId)]
+      || bookMetadata[decodeURIComponent(bookId)]
+      || (bookName ? bookMetadata[encodeURIComponent(bookName)] : undefined)
+      || (bookName ? bookMetadata[decodeURIComponent(bookName)] : undefined);
+  };
+
+  const getBookShelf = (bookId: string, bookName?: string) => {
+    if (!bookCollections) return null;
+    return bookCollections[bookId] 
+      || (bookName ? bookCollections[bookName] : null)
+      || bookCollections[encodeURIComponent(bookId)]
+      || bookCollections[decodeURIComponent(bookId)]
+      || (bookName ? bookCollections[encodeURIComponent(bookName)] : null)
+      || (bookName ? bookCollections[decodeURIComponent(bookName)] : null)
+      || null;
+  };
+
   // Collect all tags across all books
   const allTags = Array.from(new Set(
     Object.values(bookMetadata).flatMap(m => m.tags)
@@ -95,7 +116,7 @@ export default function Bookshelf() {
     .filter(b => {
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
-      const meta = bookMetadata[b.id];
+      const meta = getBookMeta(b.id, b.name);
       const titleMatch = b.name.toLowerCase().includes(q) || (meta?.customName && meta.customName.toLowerCase().includes(q));
       const authorMatch = meta?.author && meta.author.toLowerCase().includes(q);
       const descMatch = meta?.description && meta.description.toLowerCase().includes(q);
@@ -106,17 +127,18 @@ export default function Bookshelf() {
     })
     .filter(b => {
       if (shelfFilter === 'all') return true;
-      return bookCollections[b.id] === shelfFilter;
+      return getBookShelf(b.id, b.name) === shelfFilter;
     })
     .filter(b => {
       if (activeTags.length === 0) return true;
-      const tags = bookMetadata[b.id]?.tags || [];
+      const meta = getBookMeta(b.id, b.name);
+      const tags = meta?.tags || [];
       return activeTags.every(t => tags.includes(t));
     })
     .sort((a, b) => {
       if (sortBy === 'rating') {
-        const rA = bookMetadata[a.id]?.rating || 0;
-        const rB = bookMetadata[b.id]?.rating || 0;
+        const rA = getBookMeta(a.id, a.name)?.rating || 0;
+        const rB = getBookMeta(b.id, b.name)?.rating || 0;
         if (rA !== rB) return rB - rA;
       }
       if (sortBy === 'newest') {
@@ -382,7 +404,8 @@ export default function Bookshelf() {
                 ) : (
                   <div className="flex items-start gap-4 overflow-x-auto no-scrollbar py-2 px-1">
                     {readHistory.map((history) => {
-                      const meta = bookMetadata[history.bookId];
+                      const meta = getBookMeta(history.bookId, history.bookName);
+                      const shelf = getBookShelf(history.bookId, history.bookName);
                       return (
                         <BookCoverCard
                           key={history.bookId}
@@ -390,8 +413,8 @@ export default function Bookshelf() {
                           title={meta?.customName || history.bookName}
                           author={meta?.author || history.lastChapterName || 'Đang đọc'}
                           coverImage={meta?.coverImage}
-                          isCompleted={completedBooks[history.bookId]}
-                          shelf={bookCollections[history.bookId] || null}
+                          isCompleted={completedBooks[history.bookId] || completedBooks[history.bookName]}
+                          shelf={shelf}
                           rating={meta?.rating || 0}
                           onClick={() => navigate(`/book/${history.bookId}`, { state: { bookName: history.bookName } })}
                           onToggleCompleted={(e) => handleToggleBookRead(e, history.bookId)}
@@ -442,7 +465,8 @@ export default function Bookshelf() {
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
                     {sortedBooks.map((book) => {
-                      const meta = bookMetadata[book.id];
+                      const meta = getBookMeta(book.id, book.name);
+                      const shelf = getBookShelf(book.id, book.name);
                       return (
                         <BookCoverCard
                           key={book.id}
@@ -450,8 +474,8 @@ export default function Bookshelf() {
                           title={meta?.customName || book.name}
                           author={meta?.author || (book.updatedAt ? new Date(book.updatedAt).toLocaleDateString('vi-VN') : 'Sách sưu tầm')}
                           coverImage={meta?.coverImage}
-                          isCompleted={completedBooks[book.id]}
-                          shelf={bookCollections[book.id] || null}
+                          isCompleted={completedBooks[book.id] || completedBooks[book.name]}
+                          shelf={shelf}
                           rating={meta?.rating || 0}
                           onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
                           onToggleCompleted={(e) => handleToggleBookRead(e, book.id)}
@@ -522,7 +546,8 @@ export default function Bookshelf() {
               ) : bookshelfLayout === 'list' ? (
                 <div className="space-y-2">
                   {sortedBooks.map((book) => {
-                    const meta = bookMetadata[book.id];
+                    const meta = getBookMeta(book.id, book.name);
+                    const shelf = getBookShelf(book.id, book.name);
                     return (
                       <div
                         key={book.id}
@@ -539,14 +564,14 @@ export default function Bookshelf() {
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-sm text-[#3D2B1F] group-hover:text-[#E8604F] transition-colors truncate">{meta?.customName || book.name}</p>
                           <p className="text-xs text-[#6B5645]">{meta?.author || (book.updatedAt ? new Date(book.updatedAt).toLocaleDateString('vi-VN') : 'Sách sưu tầm')}</p>
-                          {bookCollections[book.id] && <span className="text-[10px] font-bold text-[#8D7FC4]">{bookCollections[book.id]}</span>}
+                          {shelf && <span className="text-[10px] font-bold text-[#8D7FC4]">{shelf}</span>}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {bookMetadata[book.id]?.rating > 0 && (
-                            <span className="text-[10px] font-bold text-[#EDB65B]">{'★'.repeat(bookMetadata[book.id].rating)}</span>
-                          )}
+                          {meta?.rating && meta.rating > 0 ? (
+                            <span className="text-[10px] font-bold text-[#EDB65B]">{'★'.repeat(meta.rating)}</span>
+                          ) : null}
                           <button onClick={(e) => handleToggleBookRead(e, book.id)} className="p-1">
-                            {completedBooks[book.id]
+                            {(completedBooks[book.id] || completedBooks[book.name])
                               ? <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                               : <Circle className="w-4 h-4 text-[#ADADAD]" />}
                           </button>
@@ -560,7 +585,8 @@ export default function Bookshelf() {
                   ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6'
                   : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'}`}>
                   {sortedBooks.map((book) => {
-                    const meta = bookMetadata[book.id];
+                    const meta = getBookMeta(book.id, book.name);
+                    const shelf = getBookShelf(book.id, book.name);
                     return (
                       <BookCoverCard
                         key={book.id}
@@ -568,8 +594,8 @@ export default function Bookshelf() {
                         title={meta?.customName || book.name}
                         author={meta?.author || (book.updatedAt ? new Date(book.updatedAt).toLocaleDateString('vi-VN') : 'Sách sưu tầm')}
                         coverImage={meta?.coverImage}
-                        isCompleted={completedBooks[book.id]}
-                        shelf={bookCollections[book.id] || null}
+                        isCompleted={completedBooks[book.id] || completedBooks[book.name]}
+                        shelf={shelf}
                         rating={meta?.rating || 0}
                         size={bookshelfLayout === 'compact' ? 'sm' : 'md'}
                         onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}

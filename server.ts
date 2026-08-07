@@ -558,6 +558,68 @@ app.get("/api/link-preview", async (req, res) => {
   }
 });
 
+// 8. API: Gemini AI Chat for Cozy Assistant (With App Context)
+app.post("/api/chat", async (req, res) => {
+  try {
+    const { message, context } = req.body || {};
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ error: "Message string is required" });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
+      return res.json({
+        reply: "⚠️ Chưa tìm thấy GEMINI_API_KEY. Bạn chỉ cần thêm `GEMINI_API_KEY=mã_key_của_bạn` vào file `.env` (local) hoặc Vercel Environment Variables để kích hoạt Trợ lý AI Gemini nhé!"
+      });
+    }
+
+    let contextSummary = "";
+    if (context) {
+      contextSummary = `
+--- DỮ LIỆU TỦ SÁCH CÁ NHÂN CỦA ĐỘC GIẢ ---
+- Độc giả: ${context.userName || 'Bạn'}
+- Thống kê: Chuỗi đọc ${context.readingStats?.streak || 0} ngày, Tổng thời gian đọc ${context.readingStats?.totalMinutes || 0} phút.
+- Sách đọc gần nhất: ${JSON.stringify(context.recentRead || [])}
+- Danh sách tác phẩm trong tủ (${context.userBooks?.length || 0} cuốn): ${JSON.stringify(context.userBooks || [])}
+- Ghi chú cá nhân gần đây: ${JSON.stringify(context.quickNotes || [])}
+------------------------------------------
+`;
+    }
+
+    const systemInstruction = `Bạn là Cozy Assistant, trợ lý AI đọc sách thông minh và ấm áp của ứng dụng ShunEbookReader.
+Bạn ĐÃ ĐƯỢC KẾT NỐI trực tiếp với dữ liệu tủ sách cá nhân thực tế của độc giả (được liệt kê ở trên).
+Hãy sử dụng thông tin này để trả lời chính xác, cá nhân hóa khi người dùng hỏi về cuốn sách họ đang đọc, gợi ý cuốn tiếp theo, tóm tắt ghi chú hoặc tra cứu thông tin tủ sách. Trả lời bằng tiếng Việt đầm ấm, tự nhiên.`;
+
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    const contents = [
+      {
+        role: "user",
+        parts: [{ text: `${systemInstruction}\n${contextSummary}\nNgười dùng hỏi: ${message}` }]
+      }
+    ];
+
+    const geminiRes = await fetch(geminiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents })
+    });
+
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text();
+      console.error("Gemini API Error:", errText);
+      return res.json({ reply: `Rất tiếc, đã có lỗi khi gọi Gemini API (${geminiRes.status}). Vui lòng kiểm tra lại GEMINI_API_KEY.` });
+    }
+
+    const data = await geminiRes.json();
+    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Không nhận được phản hồi từ Gemini API.";
+    return res.json({ reply: replyText });
+  } catch (err: any) {
+    console.error("Chat API error:", err);
+    return res.status(500).json({ reply: "Đã có lỗi kết nối khi xử lý yêu cầu chat." });
+  }
+});
+
 // Vite & Static file handler
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {

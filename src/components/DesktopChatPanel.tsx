@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, Bot, User, Sparkles, BookOpen, Plus, StickyNote, X } from 'lucide-react';
+import { Send, Bot, User, Sparkles, BookOpen, Plus, StickyNote, X, Loader2 } from 'lucide-react';
 import { useStore } from '../store';
 
 interface Message {
@@ -19,7 +19,10 @@ export const DesktopChatPanel: React.FC<DesktopChatPanelProps> = ({
   onClose,
   isCollapsible = false
 }) => {
-  const { userName, quickNotes, addQuickNote } = useStore();
+  const { 
+    userName, quickNotes, addQuickNote, readHistory, 
+    bookMetadata, bookCollections, readingStats 
+  } = useStore();
   const [activeTab, setActiveTab] = useState<'chat' | 'notes'>('chat');
   const [inputText, setInputText] = useState('');
   const [newNote, setNewNote] = useState('');
@@ -28,31 +31,17 @@ export const DesktopChatPanel: React.FC<DesktopChatPanelProps> = ({
     {
       id: '1',
       sender: 'bot',
-      text: `Xin chào ${userName || 'bạn'}! Tôi là trợ lý Cozy Shelf. Hôm nay bạn muốn đọc thể loại sách nào?`,
+      text: `Xin chào ${userName || 'bạn'}! Tôi là trợ lý Cozy Shelf. Tôi đã sẵn sàng kết nối với tủ sách của bạn để tóm tắt, gợi ý và thảo luận nhé!`,
       time: '10:00'
-    },
-    {
-      id: '2',
-      sender: 'user',
-      text: 'Gợi ý cho tôi vài cuốn sách hay về khoa học viễn tưởng hoặc kỹ năng.',
-      time: '10:01'
-    },
-    {
-      id: '3',
-      sender: 'bot',
-      text: 'Dưới đây là một số tựa sách phổ biến trong tủ sách của bạn:',
-      time: '10:01',
-      suggestedBooks: [
-        { id: '1', title: 'Đắc Nhân Tâm', author: 'Dale Carnegie' },
-        { id: '2', title: 'Nhà Giả Kim', author: 'Paulo Coelho' }
-      ]
     }
   ]);
 
-  const handleSendChat = (e?: React.FormEvent) => {
+  const [isTyping, setIsTyping] = useState(false);
+
+  const handleSendChat = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const trimmed = inputText.trim();
-    if (!trimmed) return;
+    if (!trimmed || isTyping) return;
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -63,17 +52,52 @@ export const DesktopChatPanel: React.FC<DesktopChatPanelProps> = ({
 
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
+    setIsTyping(true);
 
-    // Simulate friendly Cozy Assistant reply
-    setTimeout(() => {
+    const context = {
+      userName: userName || 'Độc giả',
+      readingStats,
+      recentRead: readHistory.slice(0, 5).map(h => ({
+        title: bookMetadata[h.bookId]?.customName || h.bookName,
+        lastChapter: h.lastChapterName
+      })),
+      userBooks: Object.entries(bookMetadata).map(([id, meta]) => ({
+        title: meta.customName || id,
+        author: meta.author || 'Sách sưu tầm',
+        shelf: bookCollections[id] || 'Tủ chung',
+        rating: meta.rating,
+        tags: meta.tags,
+        description: meta.description
+      })),
+      quickNotes: quickNotes.slice(0, 5).map(n => n.text)
+    };
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: trimmed, context })
+      });
+      const data = await res.json();
+      
       const botMsg: Message = {
         id: (Date.now() + 1).toString(),
         sender: 'bot',
-        text: `Cảm ơn bạn đã hỏi! Tôi đã ghi nhận thông tin: "${trimmed}". Bạn có thể xem thêm trong phần ghi chú tủ sách.`,
+        text: data.reply || 'Cảm ơn bạn đã hỏi! Rất tiếc trợ lý đang không thể phản hồi.',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botMsg]);
-    }, 800);
+    } catch (err) {
+      const botMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'bot',
+        text: 'Lỗi kết nối tới Trợ lý AI. Vui lòng kiểm tra mạng hoặc server.',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, botMsg]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleAddNote = (e: React.FormEvent) => {
@@ -198,6 +222,17 @@ export const DesktopChatPanel: React.FC<DesktopChatPanelProps> = ({
                 )}
               </div>
             ))}
+
+            {isTyping && (
+              <div className="flex gap-2.5 justify-start animate-fade-in">
+                <div className="w-8 h-8 rounded-full bg-[#E8604F] text-white flex items-center justify-center text-xs font-bold shrink-0 mt-1 shadow-xs">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <div className="bg-white text-[#6B5645] border border-[#E4D9C8] rounded-2xl rounded-bl-xs p-3.5 shadow-chat text-xs font-bold flex items-center gap-1.5">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8604F]" /> Cozy Assistant đang suy nghĩ...
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Input Bar */}
