@@ -37,7 +37,7 @@ export default function Reader() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { token, logout, fontSize, theme, fontFamily, setFontFamily, setFontSize, setTheme, currentBookChapters, scrollPositions, setScrollPosition, addHighlight, highlights, removeHighlight, updateReadHistory, setChapterCompleted, triggerSyncToDrive, readerTexture, setReaderTexture, customThemes } = useStore();
+  const { token, logout, fontSize, theme, fontFamily, setFontFamily, setFontSize, setTheme, currentBookChapters, scrollPositions, setScrollPosition, addHighlight, highlights, removeHighlight, updateReadHistory, setChapterCompleted, triggerSyncToDrive, readerTexture, setReaderTexture, customThemes, lineHeight, setLineHeight, recordReadingTime } = useStore();
 
   const [content, setContent] = useState('');
   const [processedContent, setProcessedContent] = useState('');
@@ -98,6 +98,13 @@ export default function Reader() {
       if (showControls) { setShowControls(false); }
     }},
   ]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      recordReadingTime(1);
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [recordReadingTime]);
 
   useEffect(() => {
     if (token && id) {
@@ -381,7 +388,7 @@ export default function Reader() {
         ) : (
           <div
             className={`prose prose-lg max-w-none reader-content-wrapper ${fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans'}`}
-            style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
+            style={{ fontSize: `${fontSize}px`, lineHeight: lineHeight || 1.8 }}
           >
             {/* Chapter Header */}
             <h1 className="font-display text-center font-bold mb-10 pb-4 border-b border-current/20" style={{ fontSize: `${Math.max(22, fontSize * 1.3)}px`, lineHeight: 1.4 }}>
@@ -469,6 +476,22 @@ export default function Reader() {
                 className="flex-1 h-2 bg-[#F0E7D8] dark:bg-black/40 rounded-lg appearance-none cursor-pointer accent-[#E8604F]"
               />
               <span className="text-xl font-bold opacity-90">A</span>
+            </div>
+
+            {/* Line Height Selector */}
+            <div className="flex items-center gap-2 px-3 pt-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 shrink-0">Dòng</span>
+              <div className="flex gap-1.5 flex-1">
+                {[1.4, 1.6, 1.8, 2.0, 2.2].map(lh => (
+                  <button
+                    key={lh}
+                    onClick={() => setLineHeight(lh)}
+                    className={`flex-1 py-1 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${lineHeight === lh ? 'bg-[#E8604F] text-white border-[#E8604F]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
+                  >
+                    {lh}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

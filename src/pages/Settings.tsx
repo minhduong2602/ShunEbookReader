@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, LogOut, Loader2, Plus, Trash2, Check, Palette, Layers, Keyboard, LayoutGrid, List, AlignJustify } from 'lucide-react';
+import { ChevronLeft, LogOut, Loader2, Plus, Trash2, Check, Palette, Layers, Keyboard, LayoutGrid, List, AlignJustify, Download, UploadCloud, Database, HardDrive, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useStore, CustomTheme, ReaderTexture, BookshelfLayout } from '../store';
 import { READER_SHORTCUTS } from '../hooks/useKeyboardShortcuts';
 import ThemePreview from '../components/ThemePreview';
@@ -37,7 +37,19 @@ export default function Settings() {
     customThemes, saveCustomTheme, deleteCustomTheme,
     readerTexture, setReaderTexture,
     bookshelfLayout, setBookshelfLayout,
+    lineHeight, setLineHeight,
+    exportBackupJSON, importBackupJSON,
   } = useStore();
+
+  const [importStatus, setImportStatus] = useState<string>('');
+  const [r2Status, setR2Status] = useState<{ r2: boolean; message: string; error?: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/status')
+      .then(res => res.json())
+      .then(data => setR2Status(data))
+      .catch(console.error);
+  }, []);
 
   const [saving, setSaving] = useState(false);
   const [showThemeEditor, setShowThemeEditor] = useState(false);
@@ -332,10 +344,91 @@ export default function Settings() {
           </div>
         </section>
 
+        {/* ─── Phase 1: Backup & Persistence ────────────────────────────── */}
+        <section className="bg-white p-6 rounded-[24px] shadow-chip border border-[#EFE6D8] space-y-4">
+          <h2 className="font-display text-lg font-bold text-[#3D2B1F] border-b border-[#EFE6D8] pb-2 flex items-center gap-2">
+            <Database className="w-5 h-5 text-[#E8604F]" /> Sao lưu & Khôi phục dữ liệu
+          </h2>
+
+          <p className="text-xs text-[#6B5645] leading-relaxed">
+            Sao lưu 100% dữ liệu tủ sách, ghi chú, đánh giá sao, theme tùy chỉnh và lịch sử đọc của bạn ra file JSON để khôi phục bất cứ lúc nào.
+          </p>
+
+          {importStatus && (
+            <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> {importStatus}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {/* Export JSON */}
+            <button
+              onClick={() => {
+                const jsonStr = exportBackupJSON();
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `cozy-shelf-backup-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                setImportStatus('Đã tải xuống file sao lưu JSON thành công!');
+                setTimeout(() => setImportStatus(''), 4000);
+              }}
+              className="flex items-center justify-center gap-2 py-3 px-4 bg-[#F0E7D8] hover:bg-[#E4D9C8] text-[#3D2B1F] font-bold text-xs rounded-2xl transition-all shadow-xs cursor-pointer active:scale-95"
+            >
+              <Download className="w-4 h-4 text-[#E8604F]" /> Tải về bản sao lưu (.json)
+            </button>
+
+            {/* Import JSON */}
+            <label className="flex items-center justify-center gap-2 py-3 px-4 bg-[#E8604F] hover:bg-[#D6503F] text-white font-bold text-xs rounded-2xl transition-all shadow-chip cursor-pointer active:scale-95 text-center">
+              <UploadCloud className="w-4 h-4" /> Khôi phục từ file (.json)
+              <input
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    const content = event.target?.result as string;
+                    if (content) {
+                      const ok = importBackupJSON(content);
+                      if (ok) {
+                        setImportStatus('Khôi phục dữ liệu từ file thành công!');
+                      } else {
+                        setImportStatus('File sao lưu không hợp lệ.');
+                      }
+                      setTimeout(() => setImportStatus(''), 4000);
+                    }
+                  };
+                  reader.readAsText(file);
+                }}
+              />
+            </label>
+          </div>
+        </section>
+
         {/* ─── Sync Status ──────────────────────────────────────────────── */}
         <section className="bg-white p-6 rounded-[24px] shadow-chip border border-[#EFE6D8] space-y-4">
-          <h2 className="font-display text-lg font-bold text-[#3D2B1F] border-b border-[#EFE6D8] pb-2">Đồng bộ đám mây</h2>
-          <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold text-[#3D2B1F] border-b border-[#EFE6D8] pb-2 flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-[#E8604F]" /> Đồng bộ đám mây (Cloud Sync)
+          </h2>
+
+          {/* R2 Status info */}
+          {r2Status && (
+            <div className={`p-4 rounded-2xl text-xs sm:text-sm flex items-start gap-3 shadow-xs border ${r2Status.r2 ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-[#EDB65B]/15 border-[#EDB65B]/30 text-[#3D2B1F]'}`}>
+              <span className="shrink-0 text-base">{r2Status.r2 ? '☁️' : '⚠️'}</span>
+              <div>
+                <p className="font-bold mb-0.5">Trạng thái Cloudflare R2 Sync</p>
+                <p className="opacity-90 leading-relaxed">{r2Status.message}</p>
+                {r2Status.error && <p className="text-[11px] opacity-75 mt-1 font-mono">{r2Status.error}</p>}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
             <div className="text-xs text-[#6B5645]">
               <p>Lần đồng bộ gần nhất: {lastSyncedAt ? new Date(lastSyncedAt).toLocaleString('vi-VN') : 'Chưa có'}</p>
               {isSyncing && <p className="text-[#E8604F] font-bold mt-1">Đang đồng bộ trong nền...</p>}

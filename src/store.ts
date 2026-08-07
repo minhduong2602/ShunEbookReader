@@ -48,6 +48,13 @@ export type BookShelf = 'reading' | 'completed' | 'dropped' | 'want';
 export type ReaderTexture = 'none' | 'paper' | 'linen' | 'aged';
 export type BookshelfLayout = 'grid' | 'list' | 'compact';
 
+export interface ReadingStats {
+  streak: number;
+  lastReadDate: string; // YYYY-MM-DD
+  totalMinutes: number;
+  totalWordsRead: number;
+}
+
 export interface HomeSection {
   key: string;
   label: string;
@@ -55,6 +62,7 @@ export interface HomeSection {
 }
 
 const DEFAULT_HOME_SECTIONS: HomeSection[] = [
+  { key: 'stats', label: 'Thống kê đọc sách', visible: true },
   { key: 'promo', label: 'Banner khám phá', visible: true },
   { key: 'recent', label: 'Đọc gần đây', visible: true },
   { key: 'new', label: 'Sách mới cập nhật', visible: true },
@@ -88,6 +96,11 @@ interface AppState {
   // Phase 2: Library
   bookCollections: Record<string, BookShelf>;
   bookMetadata: Record<string, BookMetadata>;
+
+  // Phase 1: Reading Stats & Backup
+  readingStats: ReadingStats;
+  lineHeight: number;
+  textIndent: boolean;
 
   setToken: (token: string | null) => void;
   setFolderId: (id: string) => void;
@@ -124,6 +137,13 @@ interface AppState {
   // Phase 2 actions
   setBookCollection: (bookId: string, shelf: BookShelf | null) => void;
   setBookMetadata: (bookId: string, updates: Partial<BookMetadata>) => void;
+
+  // Phase 1 actions
+  setLineHeight: (height: number) => void;
+  setTextIndent: (indent: boolean) => void;
+  recordReadingTime: (minutes: number) => void;
+  exportBackupJSON: () => string;
+  importBackupJSON: (jsonStr: string) => boolean;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -154,6 +174,11 @@ export const useStore = create<AppState>((set, get) => ({
   // Phase 2 initial state
   bookCollections: JSON.parse(localStorage.getItem('reader_book_collections') || '{}'),
   bookMetadata: JSON.parse(localStorage.getItem('reader_book_metadata') || '{}'),
+
+  // Phase 1 initial state
+  readingStats: JSON.parse(localStorage.getItem('reader_reading_stats') || '{"streak":0,"lastReadDate":"","totalMinutes":0,"totalWordsRead":0}'),
+  lineHeight: Number(localStorage.getItem('reader_line_height')) || 1.8,
+  textIndent: localStorage.getItem('reader_text_indent') !== 'false',
 
 
   setToken: (token) => {
@@ -303,33 +328,50 @@ export const useStore = create<AppState>((set, get) => ({
         const mergedHighlights = { ...get().highlights, ...(state.highlights || {}) };
         const mergedCompletedBooks = { ...get().completedBooks, ...(state.completedBooks || {}) };
         const mergedCompletedChapters = { ...get().completedChapters, ...(state.completedChapters || {}) };
+        const mergedCollections = { ...get().bookCollections, ...(state.bookCollections || {}) };
+        const mergedMetadata = { ...get().bookMetadata, ...(state.bookMetadata || {}) };
         
         localStorage.setItem('reader_scroll_positions', JSON.stringify(mergedScrolls));
         localStorage.setItem('reader_highlights', JSON.stringify(mergedHighlights));
         localStorage.setItem('reader_completed_books', JSON.stringify(mergedCompletedBooks));
         localStorage.setItem('reader_completed_chapters', JSON.stringify(mergedCompletedChapters));
-        if (state.quickNotes) {
-          localStorage.setItem('reader_quick_notes', JSON.stringify(state.quickNotes));
-        }
+        localStorage.setItem('reader_book_collections', JSON.stringify(mergedCollections));
+        localStorage.setItem('reader_book_metadata', JSON.stringify(mergedMetadata));
         
-        // Settings sync
+        if (state.quickNotes) localStorage.setItem('reader_quick_notes', JSON.stringify(state.quickNotes));
         if (state.fontSize) localStorage.setItem('reader_font_size', state.fontSize);
         if (state.theme) localStorage.setItem('reader_theme', state.theme);
         if (state.fontFamily) localStorage.setItem('reader_font_family', state.fontFamily);
         if (state.userName) localStorage.setItem('reader_user_name', state.userName);
         if (state.readHistory) localStorage.setItem('reader_history', JSON.stringify(state.readHistory));
-        
+        if (state.customThemes) localStorage.setItem('reader_custom_themes', JSON.stringify(state.customThemes));
+        if (state.readerTexture) localStorage.setItem('reader_texture', state.readerTexture);
+        if (state.bookshelfLayout) localStorage.setItem('reader_bookshelf_layout', state.bookshelfLayout);
+        if (state.homeSections) localStorage.setItem('reader_home_sections', JSON.stringify(state.homeSections));
+        if (state.readingStats) localStorage.setItem('reader_reading_stats', JSON.stringify(state.readingStats));
+        if (state.lineHeight) localStorage.setItem('reader_line_height', state.lineHeight.toString());
+        if (state.textIndent !== undefined) localStorage.setItem('reader_text_indent', JSON.stringify(state.textIndent));
+
         set({ 
           scrollPositions: mergedScrolls, 
           highlights: mergedHighlights,
           completedBooks: mergedCompletedBooks,
           completedChapters: mergedCompletedChapters,
+          bookCollections: mergedCollections,
+          bookMetadata: mergedMetadata,
           ...(state.quickNotes ? { quickNotes: state.quickNotes } : {}),
           ...(state.fontSize ? { fontSize: Number(state.fontSize) } : {}),
           ...(state.theme ? { theme: state.theme } : {}),
           ...(state.fontFamily ? { fontFamily: state.fontFamily } : {}),
           ...(state.userName ? { userName: state.userName } : {}),
           ...(state.readHistory ? { readHistory: state.readHistory } : {}),
+          ...(state.customThemes ? { customThemes: state.customThemes } : {}),
+          ...(state.readerTexture ? { readerTexture: state.readerTexture } : {}),
+          ...(state.bookshelfLayout ? { bookshelfLayout: state.bookshelfLayout } : {}),
+          ...(state.homeSections ? { homeSections: state.homeSections } : {}),
+          ...(state.readingStats ? { readingStats: state.readingStats } : {}),
+          ...(state.lineHeight ? { lineHeight: Number(state.lineHeight) } : {}),
+          ...(state.textIndent !== undefined ? { textIndent: Boolean(state.textIndent) } : {}),
           lastSyncedAt: Date.now()
         });
       }
@@ -353,6 +395,15 @@ export const useStore = create<AppState>((set, get) => ({
         fontFamily: currentState.fontFamily,
         userName: currentState.userName,
         readHistory: currentState.readHistory,
+        customThemes: currentState.customThemes,
+        readerTexture: currentState.readerTexture,
+        bookshelfLayout: currentState.bookshelfLayout,
+        homeSections: currentState.homeSections,
+        bookCollections: currentState.bookCollections,
+        bookMetadata: currentState.bookMetadata,
+        readingStats: currentState.readingStats,
+        lineHeight: currentState.lineHeight,
+        textIndent: currentState.textIndent,
         timestamp: Date.now()
       });
       set({ lastSyncedAt: Date.now() });
@@ -421,5 +472,119 @@ export const useStore = create<AppState>((set, get) => ({
       localStorage.setItem('reader_book_metadata', JSON.stringify(newMeta));
       return { bookMetadata: newMeta };
     });
+  },
+
+  // ─── Phase 1 Actions ────────────────────────────────────────────────────
+  setLineHeight: (height) => {
+    localStorage.setItem('reader_line_height', height.toString());
+    set({ lineHeight: height });
+  },
+  setTextIndent: (indent) => {
+    localStorage.setItem('reader_text_indent', JSON.stringify(indent));
+    set({ textIndent: indent });
+  },
+  recordReadingTime: (minutes) => {
+    set((state) => {
+      const today = new Date().toISOString().split('T')[0];
+      const stats = { ...state.readingStats };
+      
+      stats.totalMinutes = (stats.totalMinutes || 0) + minutes;
+      
+      if (stats.lastReadDate === today) {
+        // Already logged reading today
+      } else {
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        if (stats.lastReadDate === yesterday) {
+          stats.streak = (stats.streak || 0) + 1;
+        } else {
+          stats.streak = 1;
+        }
+        stats.lastReadDate = today;
+      }
+
+      localStorage.setItem('reader_reading_stats', JSON.stringify(stats));
+      return { readingStats: stats };
+    });
+  },
+  exportBackupJSON: () => {
+    const state = get();
+    const backupData = {
+      version: 1,
+      timestamp: Date.now(),
+      userName: state.userName,
+      fontSize: state.fontSize,
+      theme: state.theme,
+      fontFamily: state.fontFamily,
+      lineHeight: state.lineHeight,
+      textIndent: state.textIndent,
+      readerTexture: state.readerTexture,
+      bookshelfLayout: state.bookshelfLayout,
+      homeSections: state.homeSections,
+      readHistory: state.readHistory,
+      scrollPositions: state.scrollPositions,
+      highlights: state.highlights,
+      quickNotes: state.quickNotes,
+      completedBooks: state.completedBooks,
+      completedChapters: state.completedChapters,
+      customThemes: state.customThemes,
+      bookCollections: state.bookCollections,
+      bookMetadata: state.bookMetadata,
+      readingStats: state.readingStats,
+    };
+    return JSON.stringify(backupData, null, 2);
+  },
+  importBackupJSON: (jsonStr) => {
+    try {
+      const data = JSON.parse(jsonStr);
+      if (!data || typeof data !== 'object') return false;
+
+      if (data.readHistory) localStorage.setItem('reader_history', JSON.stringify(data.readHistory));
+      if (data.scrollPositions) localStorage.setItem('reader_scroll_positions', JSON.stringify(data.scrollPositions));
+      if (data.highlights) localStorage.setItem('reader_highlights', JSON.stringify(data.highlights));
+      if (data.quickNotes) localStorage.setItem('reader_quick_notes', JSON.stringify(data.quickNotes));
+      if (data.completedBooks) localStorage.setItem('reader_completed_books', JSON.stringify(data.completedBooks));
+      if (data.completedChapters) localStorage.setItem('reader_completed_chapters', JSON.stringify(data.completedChapters));
+      if (data.customThemes) localStorage.setItem('reader_custom_themes', JSON.stringify(data.customThemes));
+      if (data.readerTexture) localStorage.setItem('reader_texture', data.readerTexture);
+      if (data.bookshelfLayout) localStorage.setItem('reader_bookshelf_layout', data.bookshelfLayout);
+      if (data.homeSections) localStorage.setItem('reader_home_sections', JSON.stringify(data.homeSections));
+      if (data.bookCollections) localStorage.setItem('reader_book_collections', JSON.stringify(data.bookCollections));
+      if (data.bookMetadata) localStorage.setItem('reader_book_metadata', JSON.stringify(data.bookMetadata));
+      if (data.readingStats) localStorage.setItem('reader_reading_stats', JSON.stringify(data.readingStats));
+      if (data.fontSize) localStorage.setItem('reader_font_size', data.fontSize.toString());
+      if (data.theme) localStorage.setItem('reader_theme', data.theme);
+      if (data.fontFamily) localStorage.setItem('reader_font_family', data.fontFamily);
+      if (data.lineHeight) localStorage.setItem('reader_line_height', data.lineHeight.toString());
+      if (data.textIndent !== undefined) localStorage.setItem('reader_text_indent', JSON.stringify(data.textIndent));
+      if (data.userName) localStorage.setItem('reader_user_name', data.userName);
+
+      set({
+        ...(data.readHistory ? { readHistory: data.readHistory } : {}),
+        ...(data.scrollPositions ? { scrollPositions: data.scrollPositions } : {}),
+        ...(data.highlights ? { highlights: data.highlights } : {}),
+        ...(data.quickNotes ? { quickNotes: data.quickNotes } : {}),
+        ...(data.completedBooks ? { completedBooks: data.completedBooks } : {}),
+        ...(data.completedChapters ? { completedChapters: data.completedChapters } : {}),
+        ...(data.customThemes ? { customThemes: data.customThemes } : {}),
+        ...(data.readerTexture ? { readerTexture: data.readerTexture } : {}),
+        ...(data.bookshelfLayout ? { bookshelfLayout: data.bookshelfLayout } : {}),
+        ...(data.homeSections ? { homeSections: data.homeSections } : {}),
+        ...(data.bookCollections ? { bookCollections: data.bookCollections } : {}),
+        ...(data.bookMetadata ? { bookMetadata: data.bookMetadata } : {}),
+        ...(data.readingStats ? { readingStats: data.readingStats } : {}),
+        ...(data.fontSize ? { fontSize: Number(data.fontSize) } : {}),
+        ...(data.theme ? { theme: data.theme } : {}),
+        ...(data.fontFamily ? { fontFamily: data.fontFamily } : {}),
+        ...(data.lineHeight ? { lineHeight: Number(data.lineHeight) } : {}),
+        ...(data.textIndent !== undefined ? { textIndent: Boolean(data.textIndent) } : {}),
+        ...(data.userName ? { userName: data.userName } : {}),
+      });
+
+      get().triggerSyncToDrive().catch(console.error);
+      return true;
+    } catch (e) {
+      console.error('Import failed', e);
+      return false;
+    }
   },
 }));

@@ -16,6 +16,7 @@ import CategoryRail from '../components/CategoryRail';
 import DesktopChatPanel from '../components/DesktopChatPanel';
 import HomeSectionManager from '../components/HomeSectionManager';
 import FilterBar, { SortOption, ShelfFilter } from '../components/FilterBar';
+import ReadingStatsWidget from '../components/ReadingStatsWidget';
 
 export default function Bookshelf() {
   const navigate = useNavigate();
@@ -46,26 +47,11 @@ export default function Bookshelf() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isChatOpenMobile, setIsChatOpenMobile] = useState(false);
-  const [r2Status, setR2Status] = useState<{r2: boolean, message: string} | null>(null);
-
-  useEffect(() => {
-    localStorage.setItem('reader_active_tab', activeTab);
-  }, [activeTab]);
-
-  useEffect(() => {
-    localStorage.setItem('reader_sort_by', sortBy);
-  }, [sortBy]);
-
   useEffect(() => {
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
     });
-    
-    fetch('/api/status')
-      .then(res => res.json())
-      .then(data => setR2Status(data))
-      .catch(console.error);
   }, []);
 
   const handleInstallClick = async () => {
@@ -308,17 +294,6 @@ export default function Bookshelf() {
             </div>
           </div>
 
-          {/* R2 Warning if applicable */}
-          {r2Status && !r2Status.r2 && (
-            <div className="bg-[#EDB65B]/15 border border-[#EDB65B]/30 text-[#3D2B1F] p-4 rounded-2xl text-xs sm:text-sm flex items-start gap-3 shadow-chip">
-              <span className="shrink-0 text-base">⚠️</span>
-              <div>
-                <p className="font-bold mb-0.5">Trạng thái Cloudflare R2 Sync</p>
-                <p className="opacity-90 leading-relaxed">{r2Status.message}</p>
-              </div>
-            </div>
-          )}
-
           {/* Category Rail */}
           <CategoryRail 
             selectedCategory={selectedCategory}
@@ -337,6 +312,11 @@ export default function Bookshelf() {
                   <SlidersHorizontal className="w-3 h-3" /> Tuỳ chỉnh trang chủ
                 </button>
               </div>
+
+              {/* Reading Stats Widget */}
+              {homeSections.find(s => s.key === 'stats')?.visible && (
+                <ReadingStatsWidget />
+              )}
 
               {/* Promo Banner Card */}
               {homeSections.find(s => s.key === 'promo')?.visible && (
