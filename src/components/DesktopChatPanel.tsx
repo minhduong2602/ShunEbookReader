@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
-import { Send, Bot, User, Sparkles, BookOpen, Plus, StickyNote, X, Loader2 } from 'lucide-react';
-import { useStore } from '../store';
-
-interface Message {
-  id: string;
-  sender: 'bot' | 'user';
-  text: string;
-  time: string;
-  suggestedBooks?: { id: string; title: string; author: string }[];
-}
+import { Send, Bot, User, Sparkles, BookOpen, Plus, StickyNote, X, Loader2, Trash2 } from 'lucide-react';
+import { useStore, ChatMessage } from '../store';
 
 interface DesktopChatPanelProps {
   onClose?: () => void;
@@ -21,36 +13,36 @@ export const DesktopChatPanel: React.FC<DesktopChatPanelProps> = ({
 }) => {
   const { 
     userName, quickNotes, addQuickNote, readHistory, 
-    bookMetadata, bookCollections, readingStats 
+    bookMetadata, bookCollections, readingStats,
+    chatMessages, addChatMessage, clearChatMessages, triggerSyncToDrive
   } = useStore();
   const [activeTab, setActiveTab] = useState<'chat' | 'notes'>('chat');
   const [inputText, setInputText] = useState('');
   const [newNote, setNewNote] = useState('');
-
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      sender: 'bot',
-      text: `Xin chào ${userName || 'bạn'}! Tôi là trợ lý Cozy Shelf. Tôi đã sẵn sàng kết nối với tủ sách của bạn để tóm tắt, gợi ý và thảo luận nhé!`,
-      time: '10:00'
-    }
-  ]);
-
   const [isTyping, setIsTyping] = useState(false);
+
+  const defaultWelcomeMessage: ChatMessage = {
+    id: 'welcome',
+    sender: 'bot',
+    text: `Xin chào ${userName || 'bạn'}! Tôi là trợ lý Cozy Shelf. Tôi đã kết nối trực tiếp với tủ sách của bạn để tóm tắt, gợi ý và thảo luận nhé!`,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  };
+
+  const displayMessages = chatMessages.length > 0 ? chatMessages : [defaultWelcomeMessage];
 
   const handleSendChat = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const trimmed = inputText.trim();
     if (!trimmed || isTyping) return;
 
-    const userMsg: Message = {
+    const userMsg: ChatMessage = {
       id: Date.now().toString(),
       sender: 'user',
       text: trimmed,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    addChatMessage(userMsg);
     setInputText('');
     setIsTyping(true);
 
@@ -80,21 +72,22 @@ export const DesktopChatPanel: React.FC<DesktopChatPanelProps> = ({
       });
       const data = await res.json();
       
-      const botMsg: Message = {
+      const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: 'bot',
         text: data.reply || 'Cảm ơn bạn đã hỏi! Rất tiếc trợ lý đang không thể phản hồi.',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
-      setMessages(prev => [...prev, botMsg]);
+      addChatMessage(botMsg);
+      triggerSyncToDrive().catch(console.error);
     } catch (err) {
-      const botMsg: Message = {
+      const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: 'bot',
         text: 'Lỗi kết nối tới Trợ lý AI. Vui lòng kiểm tra mạng hoặc server.',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
-      setMessages(prev => [...prev, botMsg]);
+      addChatMessage(botMsg);
     } finally {
       setIsTyping(false);
     }
@@ -127,14 +120,25 @@ export const DesktopChatPanel: React.FC<DesktopChatPanelProps> = ({
           </div>
         </div>
 
-        {isCollapsible && onClose && (
-          <button 
-            onClick={onClose}
-            className="p-2 rounded-xl text-[#6B5645] hover:bg-[#F0E7D8] transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {chatMessages.length > 0 && (
+            <button
+              onClick={() => clearChatMessages()}
+              title="Xóa lịch sử hội thoại"
+              className="p-2 rounded-xl text-[#6B5645] hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          {isCollapsible && onClose && (
+            <button 
+              onClick={onClose}
+              className="p-2 rounded-xl text-[#6B5645] hover:bg-[#F0E7D8] transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -168,7 +172,7 @@ export const DesktopChatPanel: React.FC<DesktopChatPanelProps> = ({
         <div className="flex-1 flex flex-col justify-between overflow-hidden">
           {/* Messages scroll area */}
           <div className="flex-1 p-4 overflow-y-auto space-y-4 no-scrollbar">
-            {messages.map((msg) => (
+            {displayMessages.map((msg) => (
               <div 
                 key={msg.id}
                 className={`flex gap-2.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}

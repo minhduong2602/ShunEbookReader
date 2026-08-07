@@ -590,8 +590,6 @@ app.post("/api/chat", async (req, res) => {
 Bạn ĐÃ ĐƯỢC KẾT NỐI trực tiếp với dữ liệu tủ sách cá nhân thực tế của độc giả (được liệt kê ở trên).
 Hãy sử dụng thông tin này để trả lời chính xác, cá nhân hóa khi người dùng hỏi về cuốn sách họ đang đọc, gợi ý cuốn tiếp theo, tóm tắt ghi chú hoặc tra cứu thông tin tủ sách. Trả lời bằng tiếng Việt đầm ấm, tự nhiên.`;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
     const contents = [
       {
         role: "user",
@@ -599,20 +597,49 @@ Hãy sử dụng thông tin này để trả lời chính xác, cá nhân hóa k
       }
     ];
 
-    const geminiRes = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents })
-    });
+    const modelsToTry = [
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+      "gemini-1.5-pro",
+      "gemini-2.0-flash-lite"
+    ];
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      console.error("Gemini API Error:", errText);
-      return res.json({ reply: `Rất tiếc, đã có lỗi khi gọi Gemini API (${geminiRes.status}). Vui lòng kiểm tra lại GEMINI_API_KEY.` });
+    let replyText = "";
+    let lastError = "";
+
+    const cleanKey = apiKey.trim();
+
+    for (const model of modelsToTry) {
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
+      
+      try {
+        const geminiRes = await fetch(geminiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents })
+        });
+
+        if (geminiRes.ok) {
+          const data = await geminiRes.json();
+          replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Không nhận được nội dung từ Gemini.";
+          break;
+        } else {
+          const errBody = await geminiRes.text();
+          lastError = `[${model}] HTTP ${geminiRes.status}: ${errBody}`;
+          console.warn(`Gemini model ${model} failed:`, lastError);
+        }
+      } catch (fetchErr: any) {
+        lastError = fetchErr.message;
+      }
     }
 
-    const data = await geminiRes.json();
-    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Không nhận được phản hồi từ Gemini API.";
+    if (!replyText) {
+      return res.json({ 
+        reply: `⚠️ Không thể kết nối với các mô hình Gemini (${lastError}). Vui lòng kiểm tra lại GEMINI_API_KEY.` 
+      });
+    }
+
     return res.json({ reply: replyText });
   } catch (err: any) {
     console.error("Chat API error:", err);

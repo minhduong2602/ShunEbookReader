@@ -52,6 +52,14 @@ export type BookShelf = 'reading' | 'completed' | 'dropped' | 'want';
 export type ReaderTexture = 'none' | 'paper' | 'linen' | 'aged';
 export type BookshelfLayout = 'grid' | 'list' | 'compact';
 
+export interface ChatMessage {
+  id: string;
+  sender: 'bot' | 'user';
+  text: string;
+  time: string;
+  suggestedBooks?: { id: string; title: string; author: string }[];
+}
+
 export interface ReadingStats {
   streak: number;
   lastReadDate: string; // YYYY-MM-DD
@@ -105,6 +113,11 @@ interface AppState {
   readingStats: ReadingStats;
   lineHeight: number;
   textIndent: boolean;
+
+  // AI Chat Messages History
+  chatMessages: ChatMessage[];
+  addChatMessage: (msg: ChatMessage) => void;
+  clearChatMessages: () => void;
 
   setToken: (token: string | null) => void;
   setFolderId: (id: string) => void;
@@ -183,6 +196,8 @@ export const useStore = create<AppState>((set, get) => ({
   readingStats: JSON.parse(localStorage.getItem('reader_reading_stats') || '{"streak":0,"lastReadDate":"","totalMinutes":0,"totalWordsRead":0}'),
   lineHeight: Number(localStorage.getItem('reader_line_height')) || 1.8,
   textIndent: localStorage.getItem('reader_text_indent') !== 'false',
+
+  chatMessages: JSON.parse(localStorage.getItem('reader_chat_messages') || '[]'),
 
 
   setToken: (token) => {
@@ -376,6 +391,7 @@ export const useStore = create<AppState>((set, get) => ({
           ...(state.readingStats ? { readingStats: state.readingStats } : {}),
           ...(state.lineHeight ? { lineHeight: Number(state.lineHeight) } : {}),
           ...(state.textIndent !== undefined ? { textIndent: Boolean(state.textIndent) } : {}),
+          ...(state.chatMessages ? { chatMessages: state.chatMessages } : {}),
           lastSyncedAt: Date.now()
         });
       }
@@ -408,6 +424,7 @@ export const useStore = create<AppState>((set, get) => ({
         readingStats: currentState.readingStats,
         lineHeight: currentState.lineHeight,
         textIndent: currentState.textIndent,
+        chatMessages: currentState.chatMessages,
         timestamp: Date.now()
       });
       set({ lastSyncedAt: Date.now() });
@@ -460,22 +477,35 @@ export const useStore = create<AppState>((set, get) => ({
   setBookCollection: (bookId, shelf) => {
     set((state) => {
       const newCollections = { ...state.bookCollections };
-      if (shelf === null) {
-        delete newCollections[bookId];
-      } else {
-        newCollections[bookId] = shelf;
-      }
+      const keys = Array.from(new Set([bookId, decodeURIComponent(bookId), encodeURIComponent(bookId)]));
+      keys.forEach(k => {
+        if (shelf === null) {
+          delete newCollections[k];
+        } else {
+          newCollections[k] = shelf;
+        }
+      });
       localStorage.setItem('reader_book_collections', JSON.stringify(newCollections));
       return { bookCollections: newCollections };
     });
+    get().triggerSyncToDrive().catch(console.error);
   },
   setBookMetadata: (bookId, updates) => {
     set((state) => {
-      const current = state.bookMetadata[bookId] || { rating: 0, tags: [], review: '' };
-      const newMeta = { ...state.bookMetadata, [bookId]: { ...current, ...updates } };
+      const keys = Array.from(new Set([bookId, decodeURIComponent(bookId), encodeURIComponent(bookId)]));
+      const current = state.bookMetadata[bookId] 
+        || state.bookMetadata[decodeURIComponent(bookId)] 
+        || state.bookMetadata[encodeURIComponent(bookId)] 
+        || { rating: 0, tags: [], review: '' };
+      const updatedItem = { ...current, ...updates };
+      const newMeta = { ...state.bookMetadata };
+      keys.forEach(k => {
+        newMeta[k] = updatedItem;
+      });
       localStorage.setItem('reader_book_metadata', JSON.stringify(newMeta));
       return { bookMetadata: newMeta };
     });
+    get().triggerSyncToDrive().catch(console.error);
   },
 
   // ─── Phase 1 Actions ────────────────────────────────────────────────────
@@ -510,6 +540,17 @@ export const useStore = create<AppState>((set, get) => ({
       return { readingStats: stats };
     });
   },
+  addChatMessage: (msg) => {
+    set((state) => {
+      const newMessages = [...state.chatMessages, msg];
+      localStorage.setItem('reader_chat_messages', JSON.stringify(newMessages));
+      return { chatMessages: newMessages };
+    });
+  },
+  clearChatMessages: () => {
+    localStorage.removeItem('reader_chat_messages');
+    set({ chatMessages: [] });
+  },
   exportBackupJSON: () => {
     const state = get();
     const backupData = {
@@ -534,6 +575,7 @@ export const useStore = create<AppState>((set, get) => ({
       bookCollections: state.bookCollections,
       bookMetadata: state.bookMetadata,
       readingStats: state.readingStats,
+      chatMessages: state.chatMessages,
     };
     return JSON.stringify(backupData, null, 2);
   },
@@ -555,6 +597,7 @@ export const useStore = create<AppState>((set, get) => ({
       if (data.bookCollections) localStorage.setItem('reader_book_collections', JSON.stringify(data.bookCollections));
       if (data.bookMetadata) localStorage.setItem('reader_book_metadata', JSON.stringify(data.bookMetadata));
       if (data.readingStats) localStorage.setItem('reader_reading_stats', JSON.stringify(data.readingStats));
+      if (data.chatMessages) localStorage.setItem('reader_chat_messages', JSON.stringify(data.chatMessages));
       if (data.fontSize) localStorage.setItem('reader_font_size', data.fontSize.toString());
       if (data.theme) localStorage.setItem('reader_theme', data.theme);
       if (data.fontFamily) localStorage.setItem('reader_font_family', data.fontFamily);
@@ -576,6 +619,7 @@ export const useStore = create<AppState>((set, get) => ({
         ...(data.bookCollections ? { bookCollections: data.bookCollections } : {}),
         ...(data.bookMetadata ? { bookMetadata: data.bookMetadata } : {}),
         ...(data.readingStats ? { readingStats: data.readingStats } : {}),
+        ...(data.chatMessages ? { chatMessages: data.chatMessages } : {}),
         ...(data.fontSize ? { fontSize: Number(data.fontSize) } : {}),
         ...(data.theme ? { theme: data.theme } : {}),
         ...(data.fontFamily ? { fontFamily: data.fontFamily } : {}),

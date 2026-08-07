@@ -43,6 +43,19 @@ export default function Book() {
   const bookId = id || '';
   const bookName = location.state?.bookName || decodeURIComponent(id || 'Book Chapters');
 
+  const currentMeta = bookMetadata[bookId] 
+    || bookMetadata[bookName] 
+    || bookMetadata[encodeURIComponent(bookName)] 
+    || bookMetadata[encodeURIComponent(bookId)]
+    || bookMetadata[decodeURIComponent(bookId)]
+    || { rating: 0, tags: [], review: '' };
+
+  const currentShelf = bookCollections[bookId] 
+    || bookCollections[bookName] 
+    || bookCollections[encodeURIComponent(bookName)]
+    || bookCollections[decodeURIComponent(bookId)]
+    || null;
+
   useEffect(() => {
     if (id) {
       loadChapters();
@@ -108,7 +121,7 @@ export default function Book() {
               <ChevronLeft className="w-6 h-6" />
             </button>
             <h1 className="font-display text-lg font-bold text-[#3D2B1F] truncate flex items-center gap-2">
-              <span className="truncate">{bookName}</span>
+              <span className="truncate">{currentMeta.customName || bookName}</span>
               {isBookDone && (
                 <span className="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-semibold shrink-0 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Đã xong
@@ -148,9 +161,9 @@ export default function Book() {
         <div className="bg-white rounded-[24px] p-6 border border-[#EFE6D8] shadow-chip flex flex-col sm:flex-row items-center sm:items-start gap-6">
           <BookCoverCard 
             id={bookId}
-            title={bookMetadata[bookId]?.customName || bookName}
-            author={bookMetadata[bookId]?.author || "Sách sưu tầm"}
-            coverImage={bookMetadata[bookId]?.coverImage}
+            title={currentMeta.customName || bookName}
+            author={currentMeta.author || "Sách sưu tầm"}
+            coverImage={currentMeta.coverImage}
             isCompleted={isBookDone}
             size="lg"
           />
@@ -169,15 +182,15 @@ export default function Book() {
             </div>
 
             <h1 className="font-display font-bold text-2xl sm:text-3xl text-[#3D2B1F] leading-tight">
-              {bookMetadata[bookId]?.customName || bookName}
+              {currentMeta.customName || bookName}
             </h1>
 
             <p className="text-xs sm:text-sm text-[#B54B3C] font-semibold">
-              Tác giả: {bookMetadata[bookId]?.author || "Sách sưu tầm"}
+              Tác giả: {currentMeta.author || "Sách sưu tầm"}
             </p>
 
             <p className="text-xs sm:text-sm text-[#6B5645] leading-relaxed">
-              {bookMetadata[bookId]?.description || `Tổng cộng ${chapters.length} chương truyện. Được lưu trữ đầm ấm trên hệ thống Cozy Shelf.`}
+              {currentMeta.description || `Tổng cộng ${chapters.length} chương truyện. Được lưu trữ đầm ấm trên hệ thống Cozy Shelf.`}
             </p>
 
             {/* Read Count Summary */}
@@ -206,7 +219,7 @@ export default function Book() {
                 <input
                   type="text"
                   placeholder={bookName}
-                  value={bookMetadata[bookId]?.customName || ''}
+                  value={currentMeta.customName || ''}
                   onChange={(e) => setBookMetadata(bookId, { customName: e.target.value })}
                   className="w-full px-4 py-2.5 bg-white border border-[#EFE6D8] rounded-xl text-sm font-medium text-[#3D2B1F] outline-none focus:ring-2 focus:ring-[#E8604F]/30"
                 />
@@ -218,7 +231,7 @@ export default function Book() {
                 <input
                   type="text"
                   placeholder="Nhập tên tác giả..."
-                  value={bookMetadata[bookId]?.author || ''}
+                  value={currentMeta.author || ''}
                   onChange={(e) => setBookMetadata(bookId, { author: e.target.value })}
                   className="w-full px-4 py-2.5 bg-white border border-[#EFE6D8] rounded-xl text-sm font-medium text-[#3D2B1F] outline-none focus:ring-2 focus:ring-[#E8604F]/30"
                 />
@@ -230,7 +243,7 @@ export default function Book() {
               <label className="text-xs font-bold text-[#6B5645] uppercase tracking-wider">Giới thiệu / Mô tả bộ truyện</label>
               <textarea
                 placeholder="Nhập tóm tắt, mô tả nội dung cuốn sách..."
-                value={bookMetadata[bookId]?.description || ''}
+                value={currentMeta.description || ''}
                 onChange={(e) => setBookMetadata(bookId, { description: e.target.value })}
                 rows={3}
                 className="w-full px-4 py-2.5 bg-white border border-[#EFE6D8] rounded-xl text-sm font-medium text-[#3D2B1F] outline-none focus:ring-2 focus:ring-[#E8604F]/30 resize-none"
@@ -265,7 +278,7 @@ export default function Book() {
                   />
                 </label>
 
-                {bookMetadata[bookId]?.coverImage && (
+                {currentMeta.coverImage && (
                   <button
                     onClick={() => setBookMetadata(bookId, { coverImage: '' })}
                     className="flex items-center gap-1.5 px-3 py-2.5 bg-red-50 text-[#B54B3C] hover:bg-red-100 text-xs font-bold rounded-xl transition-colors cursor-pointer"
@@ -301,14 +314,14 @@ export default function Book() {
               {[1,2,3,4,5].map(s => (
                 <button
                   key={s}
-                  onClick={() => setBookMetadata(bookId, { rating: bookMetadata[bookId]?.rating === s ? 0 : s })}
+                  onClick={() => setBookMetadata(bookId, { rating: currentMeta.rating === s ? 0 : s })}
                   className="transition-transform hover:scale-110 active:scale-95 cursor-pointer"
                 >
-                  <Star className={`w-7 h-7 ${s <= (bookMetadata[bookId]?.rating || 0) ? 'text-[#EDB65B] fill-[#EDB65B]' : 'text-[#E4D9C8]'}`} />
+                  <Star className={`w-7 h-7 ${s <= (currentMeta.rating || 0) ? 'text-[#EDB65B] fill-[#EDB65B]' : 'text-[#E4D9C8]'}`} />
                 </button>
               ))}
-              {bookMetadata[bookId]?.rating > 0 && (
-                <span className="text-xs font-bold text-[#6B5645] ml-2">{bookMetadata[bookId].rating}/5</span>
+              {currentMeta.rating > 0 && (
+                <span className="text-xs font-bold text-[#6B5645] ml-2">{currentMeta.rating}/5</span>
               )}
             </div>
           </div>
@@ -325,9 +338,9 @@ export default function Book() {
               ] as { value: BookShelf; label: string }[]).map(shelf => (
                 <button
                   key={shelf.value}
-                  onClick={() => setBookCollection(bookId, bookCollections[bookId] === shelf.value ? null : shelf.value)}
+                  onClick={() => setBookCollection(bookId, currentShelf === shelf.value ? null : shelf.value)}
                   className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
-                    bookCollections[bookId] === shelf.value
+                    currentShelf === shelf.value
                       ? 'bg-[#E8604F] text-white border-[#E8604F]'
                       : 'border-[#EFE6D8] text-[#6B5645] hover:border-[#E8604F]/40'
                   }`}
@@ -344,10 +357,10 @@ export default function Book() {
               <Tag className="w-3 h-3" /> Tags
             </label>
             <div className="flex flex-wrap gap-1.5 mb-2">
-              {(bookMetadata[bookId]?.tags || []).map(tag => (
+              {(currentMeta.tags || []).map(tag => (
                 <span key={tag} className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#8D7FC4]/15 text-[#8D7FC4] text-[11px] font-bold border border-[#8D7FC4]/25">
                   #{tag}
-                  <button onClick={() => setBookMetadata(bookId, { tags: bookMetadata[bookId].tags.filter(t => t !== tag) })} className="ml-0.5 opacity-60 hover:opacity-100">
+                  <button onClick={() => setBookMetadata(bookId, { tags: (currentMeta.tags || []).filter(t => t !== tag) })} className="ml-0.5 opacity-60 hover:opacity-100">
                     <X className="w-2.5 h-2.5" />
                   </button>
                 </span>
@@ -361,48 +374,64 @@ export default function Book() {
                 onChange={e => setTagInput(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && tagInput.trim()) {
-                    const current = bookMetadata[bookId]?.tags || [];
+                    const current = currentMeta.tags || [];
                     if (!current.includes(tagInput.trim())) {
                       setBookMetadata(bookId, { tags: [...current, tagInput.trim()] });
                     }
                     setTagInput('');
                   }
                 }}
-                className="flex-1 px-3 py-2 bg-[#F0E7D8] rounded-full text-xs text-[#3D2B1F] outline-none focus:ring-2 focus:ring-[#8D7FC4]/30"
+                className="px-3 py-1.5 bg-[#F9F5EE] border border-[#EFE6D8] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#E8604F] w-64"
               />
               <button
                 onClick={() => {
                   if (tagInput.trim()) {
-                    const current = bookMetadata[bookId]?.tags || [];
+                    const current = currentMeta.tags || [];
                     if (!current.includes(tagInput.trim())) {
                       setBookMetadata(bookId, { tags: [...current, tagInput.trim()] });
                     }
                     setTagInput('');
                   }
                 }}
-                className="px-3 py-2 bg-[#8D7FC4] text-white text-xs font-bold rounded-full cursor-pointer hover:bg-[#7A6DB5] transition-colors"
+                className="px-3 py-1.5 bg-[#8D7FC4] text-white text-xs font-bold rounded-xl hover:bg-[#7D6FB4] cursor-pointer"
               >
-                Thêm
+                Thêm tag
               </button>
             </div>
           </div>
 
-          {/* Review */}
+          {/* Personal Review */}
           <div className="space-y-1.5">
-            <button
-              onClick={() => setShowReview(r => !r)}
-              className="text-xs font-bold text-[#6B5645] uppercase tracking-wider flex items-center gap-1 cursor-pointer hover:text-[#3D2B1F]"
-            >
-              <BookOpen className="w-3 h-3" /> Ghi chú / Review {showReview ? '▲' : '▼'}
-            </button>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-[#6B5645] uppercase tracking-wider">Cảm nhận / Review cá nhân</label>
+              {!showReview && (
+                <button onClick={() => setShowReview(true)} className="text-xs font-bold text-[#E8604F] hover:underline cursor-pointer">
+                  {currentMeta.review ? '✏️ Sửa review' : '✍️ Viết review'}
+                </button>
+              )}
+            </div>
+
+            {currentMeta.review && !showReview && (
+              <p className="text-xs text-[#3D2B1F] bg-[#F9F5EE] p-3 rounded-xl border border-[#EFE6D8] italic">
+                "{currentMeta.review}"
+              </p>
+            )}
+
             {showReview && (
-              <textarea
-                placeholder="Viết cảm nhận, ghi chú về cuốn sách này..."
-                value={bookMetadata[bookId]?.review || ''}
-                onChange={e => setBookMetadata(bookId, { review: e.target.value })}
-                rows={4}
-                className="w-full px-4 py-3 bg-[#F0E7D8] rounded-2xl text-sm text-[#3D2B1F] outline-none focus:ring-2 focus:ring-[#E8604F]/30 resize-none leading-relaxed"
-              />
+              <div className="space-y-2">
+                <textarea
+                  placeholder="Nhập cảm nhận cá nhân về bộ truyện này..."
+                  value={currentMeta.review || ''}
+                  onChange={e => setBookMetadata(bookId, { review: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-[#F9F5EE] border border-[#EFE6D8] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#E8604F] resize-none"
+                />
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setShowReview(false)} className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold cursor-pointer">
+                    Xong
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>
