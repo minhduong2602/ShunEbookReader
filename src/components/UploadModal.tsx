@@ -178,22 +178,24 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
       <div 
-        className="bg-white w-full max-w-lg rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh] border border-gray-100 transition-all transform scale-100"
+        className="bg-white w-full max-w-lg rounded-[28px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh] border border-[#E4D9C8] transition-all transform scale-100 font-sans"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-[#F7F5F0]">
-          <div className="flex items-center gap-2">
-            <Upload className="w-5 h-5 text-[#E06B65]" />
-            <h2 className="text-lg font-bold text-gray-900">
+        <div className="px-6 py-5 border-b border-[#EFE6D8] flex items-center justify-between bg-[#FBF6EC]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#E8604F]/10 text-[#E8604F] flex items-center justify-center font-bold">
+              <Upload className="w-5 h-5" />
+            </div>
+            <h2 className="font-display text-xl font-bold text-[#3D2B1F]">
               {initialBookName ? `Thêm chương vào "${initialBookName}"` : 'Tải lên truyện mới'}
             </h2>
           </div>
           <button 
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-2 text-[#6B5645] hover:text-[#3D2B1F] rounded-full hover:bg-[#F0E7D8] transition-colors cursor-pointer"
             disabled={isUploading}
           >
             <X className="w-5 h-5" />
@@ -201,9 +203,9 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
         </div>
 
         {/* Form Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-left">
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-left bg-white">
           {generalError && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm flex items-start gap-2 border border-red-100">
+            <div className="bg-[#E8604F]/10 text-[#B54B3C] p-3.5 rounded-2xl text-sm flex items-start gap-2.5 border border-[#E8604F]/20 font-medium">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{generalError}</span>
             </div>
@@ -211,8 +213,8 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
 
           {/* Book Selector */}
           {!initialBookName && (
-            <div className="space-y-3">
-              <label className="block text-sm font-semibold text-gray-700">
+            <div className="space-y-2.5">
+              <label className="block text-xs font-bold text-[#3D2B1F] tracking-wide uppercase">
                 Thư mục sách (Novel Folder)
               </label>
               
@@ -220,7 +222,7 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
                 <select
                   value={isCreatingNew ? '__new__' : selectedBookOption}
                   onChange={handleOptionChange}
-                  className="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-[#E06B65]/30 focus:border-[#E06B65] outline-none transition-all"
+                  className="flex-1 px-4 py-3 bg-[#F0E7D8] border border-transparent rounded-2xl text-sm text-[#3D2B1F] focus:ring-2 focus:ring-[#E8604F]/30 outline-none transition-all font-medium"
                   disabled={isUploading || loadingBooks}
                 >
                   {loadingBooks ? (
@@ -238,8 +240,8 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
               </div>
 
               {isCreatingNew && (
-                <div className="space-y-1.5 animate-slide-up">
-                  <div className="flex items-center gap-1.5 text-xs text-[#E06B65] font-medium">
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center gap-1.5 text-xs text-[#E8604F] font-bold">
                     <Plus className="w-3.5 h-3.5" /> Nhập tên bộ truyện mới:
                   </div>
                   <input
@@ -247,7 +249,7 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
                     value={newBookName}
                     onChange={(e) => setNewBookName(e.target.value)}
                     placeholder="Ví dụ: Thần Điêu Hiệp Lữ, Harry Potter..."
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-900 focus:ring-2 focus:ring-[#E06B65]/30 focus:border-[#E06B65] outline-none transition-all"
+                    className="w-full px-4 py-3 border border-[#E4D9C8] rounded-2xl text-sm bg-[#FBF6EC] text-[#3D2B1F] placeholder-[#6B5645] focus:ring-2 focus:ring-[#E8604F]/30 outline-none transition-all font-medium"
                     disabled={isUploading}
                     maxLength={60}
                   />
@@ -258,7 +260,7 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
 
           {/* Drag & Drop Area */}
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700">
+            <label className="block text-xs font-bold text-[#3D2B1F] tracking-wide uppercase">
               Chọn tệp chương truyện
             </label>
             <div
@@ -266,10 +268,10 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => !isUploading && fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[140px] ${
+              className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[140px] ${
                 isDragging 
-                  ? 'border-[#E06B65] bg-[#FDF3F2]/60' 
-                  : 'border-gray-200 hover:border-[#E06B65]/40 bg-[#F7F5F0]/50'
+                  ? 'border-[#E8604F] bg-[#E8604F]/5' 
+                  : 'border-[#E4D9C8] hover:border-[#E8604F]/50 bg-[#F0E7D8]/40'
               } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <input
@@ -281,11 +283,13 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
                 className="hidden"
                 disabled={isUploading}
               />
-              <Upload className="w-10 h-10 text-gray-400 mb-2" />
-              <p className="text-sm font-medium text-gray-700">
-                Kéo & thả các chương truyện vào đây, hoặc <span className="text-[#E06B65] underline">chọn tệp</span>
+              <div className="w-12 h-12 rounded-full bg-[#E8604F]/10 text-[#E8604F] flex items-center justify-center mb-2">
+                <Upload className="w-6 h-6" />
+              </div>
+              <p className="text-sm font-semibold text-[#3D2B1F]">
+                Kéo & thả các chương truyện vào đây, hoặc <span className="text-[#E8604F] underline">chọn tệp</span>
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-[#6B5645] mt-1">
                 Hỗ trợ định dạng: .TXT, .DOCX, .HTML (Có thể chọn nhiều tệp)
               </p>
             </div>
@@ -295,51 +299,51 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
           {files.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <span className="text-xs font-bold text-[#6B5645] uppercase tracking-wider">
                   Danh sách tệp ({files.length})
                 </span>
                 {!isUploading && (
                   <button 
                     onClick={() => setFiles([])} 
-                    className="text-xs text-red-500 hover:underline"
+                    className="text-xs text-[#B54B3C] font-semibold hover:underline cursor-pointer"
                   >
                     Xóa tất cả
                   </button>
                 )}
               </div>
-              <div className="border border-gray-100 rounded-xl overflow-hidden max-h-[200px] overflow-y-auto divide-y divide-gray-100 bg-white">
+              <div className="border border-[#E4D9C8] rounded-2xl overflow-hidden max-h-[180px] overflow-y-auto divide-y divide-[#EFE6D8] bg-[#FBF6EC]">
                 {files.map((file, idx) => {
                   const status = uploadProgress[file.name] || 'pending';
                   return (
-                    <div key={file.name} className="px-4 py-2.5 flex items-center justify-between text-sm">
+                    <div key={file.name} className="px-4 py-3 flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-3">
-                        <FileText className="w-4 h-4 text-[#E06B65] shrink-0" />
-                        <span className="text-gray-700 truncate font-medium">{file.name}</span>
-                        <span className="text-xs text-gray-400 shrink-0">({(file.size / 1024).toFixed(1)} KB)</span>
+                        <FileText className="w-4 h-4 text-[#E8604F] shrink-0" />
+                        <span className="text-[#3D2B1F] truncate font-semibold">{file.name}</span>
+                        <span className="text-xs text-[#6B5645] shrink-0">({(file.size / 1024).toFixed(1)} KB)</span>
                       </div>
                       
                       <div className="flex items-center shrink-0">
                         {status === 'pending' && !isUploading && (
                           <button 
                             onClick={() => removeFile(idx)}
-                            className="p-1 text-gray-400 hover:text-red-500 rounded-lg transition-colors"
+                            className="p-1 text-[#6B5645] hover:text-[#B54B3C] rounded-lg transition-colors cursor-pointer"
                           >
                             <X className="w-4 h-4" />
                           </button>
                         )}
                         {status === 'pending' && isUploading && (
-                          <span className="text-xs text-gray-400">Đang chờ...</span>
+                          <span className="text-xs text-[#6B5645]">Đang chờ...</span>
                         )}
                         {status === 'uploading' && (
-                          <Loader2 className="w-4 h-4 text-[#E06B65] animate-spin" />
+                          <Loader2 className="w-4 h-4 text-[#E8604F] animate-spin" />
                         )}
                         {status === 'success' && (
-                          <span className="text-green-500 flex items-center gap-1 font-semibold text-xs">
+                          <span className="text-emerald-600 flex items-center gap-1 font-bold text-xs">
                             <Check className="w-4 h-4" /> Thành công
                           </span>
                         )}
                         {status === 'error' && (
-                          <span className="text-red-500 flex items-center gap-1 font-semibold text-xs">
+                          <span className="text-[#B54B3C] flex items-center gap-1 font-bold text-xs">
                             <AlertCircle className="w-4 h-4" /> Lỗi
                           </span>
                         )}
@@ -353,17 +357,17 @@ export default function UploadModal({ isOpen, onClose, initialBookName, onUpload
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-[#F7F5F0] border-t border-gray-100 flex justify-end gap-3 shrink-0">
+        <div className="px-6 py-4 bg-[#FBF6EC] border-t border-[#EFE6D8] flex justify-end gap-3 shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-200 hover:bg-gray-100 text-gray-700 font-medium rounded-lg text-sm transition-colors"
+            className="px-5 py-2.5 border border-[#E4D9C8] hover:bg-white text-[#3D2B1F] font-semibold rounded-full text-sm transition-colors cursor-pointer"
             disabled={isUploading}
           >
             Đóng
           </button>
           <button
             onClick={handleUploadSubmit}
-            className="px-5 py-2 bg-[#E06B65] hover:bg-[#C9534E] text-white font-medium rounded-lg text-sm transition-colors shadow flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 bg-[#E8604F] hover:bg-[#D6503F] text-white font-bold rounded-full text-sm transition-all shadow-chip flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 cursor-pointer"
             disabled={isUploading || files.length === 0}
           >
             {isUploading ? (

@@ -1,10 +1,11 @@
 import { useState, useEffect, MouseEvent } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ChevronLeft, FileText, Loader2, Upload, CheckCircle2, Circle, ArrowUpDown, CheckCheck, BookCheck } from 'lucide-react';
+import { ChevronLeft, FileText, Loader2, Upload, CheckCircle2, Circle, ArrowUpDown, CheckCheck, BookCheck, Sparkles } from 'lucide-react';
 import { useStore } from '../store';
 import { getFiles, DriveFile } from '../lib/drive';
 import { formatChapterName } from '../lib/utils';
 import UploadModal from '../components/UploadModal';
+import BookCoverCard from '../components/BookCoverCard';
 
 export default function Book() {
   const { id } = useParams();
@@ -52,7 +53,7 @@ export default function Book() {
       setChapters(files);
       setCurrentBookChapters(files);
     } catch (err: any) {
-      setError('Failed to load chapters.');
+      setError('Không thể tải danh sách chương.');
     } finally {
       setLoading(false);
     }
@@ -91,40 +92,44 @@ export default function Book() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F5F0] pb-20">
-      <header className="bg-white shadow-sm sticky top-0 z-40 border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-2 h-16 flex items-center justify-between gap-2">
+    <div className="min-h-screen bg-[#FBF6EC] text-[#3D2B1F] pb-24 font-sans">
+      {/* Sticky Header */}
+      <header className="bg-white/90 backdrop-blur-md shadow-chip sticky top-0 z-40 border-b border-[#EFE6D8]">
+        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <button onClick={() => navigate(-1)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors cursor-pointer shrink-0">
+            <button 
+              onClick={() => navigate('/bookshelf')} 
+              className="p-2 text-[#6B5645] hover:text-[#3D2B1F] hover:bg-[#F0E7D8] rounded-full transition-colors cursor-pointer shrink-0"
+            >
               <ChevronLeft className="w-6 h-6" />
             </button>
-            <h1 className="text-lg font-bold text-gray-900 truncate flex-1 flex items-center gap-2">
+            <h1 className="font-display text-lg font-bold text-[#3D2B1F] truncate flex items-center gap-2">
               <span className="truncate">{bookName}</span>
               {isBookDone && (
-                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Đã đọc
+                <span className="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-semibold shrink-0 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Đã xong
                 </span>
               )}
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 pr-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handleToggleBook}
-              title={isBookDone ? 'Bỏ đánh dấu truyện đã đọc' : 'Đánh dấu đã đọc truyện'}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer ${
+              title={isBookDone ? 'Bỏ đánh dấu hoàn thành' : 'Đánh dấu hoàn thành'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full transition-all shadow-chip cursor-pointer ${
                 isBookDone 
-                  ? 'bg-green-600 hover:bg-green-700 text-white' 
-                  : 'bg-[#F7F5F0] hover:bg-gray-100 text-gray-700'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white' 
+                  : 'bg-white hover:bg-[#F0E7D8] text-[#3D2B1F] border border-[#E4D9C8]'
               }`}
             >
               <BookCheck className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{isBookDone ? 'Đã xong' : 'Đánh dấu đã đọc'}</span>
+              <span className="hidden sm:inline">{isBookDone ? 'Đã hoàn thành' : 'Đánh dấu hoàn thành'}</span>
             </button>
 
             <button 
               onClick={() => setIsUploadOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#E06B65] hover:bg-[#C9534E] active:scale-95 rounded-xl transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-[#E8604F] hover:bg-[#D6503F] active:scale-95 rounded-full transition-all shadow-chip cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Thêm chương</span>
@@ -133,30 +138,71 @@ export default function Book() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto p-4 space-y-4">
+      <main className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
+        
+        {/* Cozy Hero Section with Signature Book Cover Card */}
+        <div className="bg-white rounded-[24px] p-6 border border-[#EFE6D8] shadow-chip flex flex-col sm:flex-row items-center sm:items-start gap-6">
+          <BookCoverCard 
+            id={bookId}
+            title={bookName}
+            author="Sách sưu tầm"
+            isCompleted={isBookDone}
+            size="lg"
+          />
+
+          <div className="flex-1 text-center sm:text-left space-y-3 pt-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#E8604F] bg-[#E8604F]/10 px-3 py-1 rounded-full">
+              Thư mục bộ truyện
+            </span>
+
+            <h1 className="font-display font-bold text-2xl sm:text-3xl text-[#3D2B1F] leading-tight">
+              {bookName}
+            </h1>
+
+            <p className="text-xs sm:text-sm text-[#B54B3C] font-semibold">
+              Tác giả: Sách sưu tầm
+            </p>
+
+            <p className="text-xs sm:text-sm text-[#6B5645] leading-relaxed">
+              Tổng cộng {chapters.length} chương truyện. Được lưu trữ đầm ấm trên hệ thống Cozy Shelf.
+            </p>
+
+            {/* Read Count Summary */}
+            <div className="pt-2 flex items-center justify-center sm:justify-start gap-4 text-xs font-semibold text-[#3D2B1F]">
+              <span className="bg-[#F0E7D8] px-3 py-1.5 rounded-full">
+                📖 Đã đọc: {readCount} / {chapters.length}
+              </span>
+              <span className="bg-[#F0E7D8] px-3 py-1.5 rounded-full">
+                ✨ Hoàn thành: {chapters.length > 0 ? Math.round((readCount / chapters.length) * 100) : 0}%
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Progress & Controls Bar */}
         {!loading && !error && chapters.length > 0 && (
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-white p-4 rounded-[20px] shadow-chip border border-[#EFE6D8] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1.5 flex-1">
-              <div className="flex items-center justify-between text-xs font-semibold text-gray-600">
-                <span>Tiến độ đọc: {readCount} / {chapters.length} chương</span>
+              <div className="flex items-center justify-between text-xs font-bold text-[#6B5645]">
+                <span>Tiến độ đọc toàn bộ</span>
                 <span>{chapters.length > 0 ? Math.round((readCount / chapters.length) * 100) : 0}%</span>
               </div>
-              <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-[#F0E7D8] rounded-full h-2.5 overflow-hidden">
                 <div 
-                  className="bg-green-500 h-full transition-all duration-300 rounded-full"
+                  className="bg-[#E8604F] h-full transition-all duration-300 rounded-full"
                   style={{ width: `${chapters.length > 0 ? (readCount / chapters.length) * 100 : 0}%` }}
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-2 border-t sm:border-t-0 pt-3 sm:pt-0 border-gray-100 shrink-0">
-              <div className="flex items-center gap-1 bg-[#F7F5F0] p-1 rounded-xl text-xs">
+            <div className="flex items-center gap-2 border-t sm:border-t-0 pt-3 sm:pt-0 border-[#EFE6D8] shrink-0">
+              <div className="flex items-center gap-1 bg-[#F0E7D8] p-1 rounded-full text-xs font-semibold">
                 <button
                   onClick={() => setSortBy('newest')}
-                  className={`px-2.5 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1 ${
+                  className={`px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 cursor-pointer ${
                     sortBy === 'newest' 
-                      ? 'bg-white text-[#E06B65] shadow-xs' 
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-white text-[#E8604F] shadow-xs' 
+                      : 'text-[#6B5645] hover:text-[#3D2B1F]'
                   }`}
                 >
                   <ArrowUpDown className="w-3.5 h-3.5" />
@@ -164,10 +210,10 @@ export default function Book() {
                 </button>
                 <button
                   onClick={() => setSortBy('name')}
-                  className={`px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
                     sortBy === 'name' 
-                      ? 'bg-white text-[#E06B65] shadow-xs' 
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-white text-[#E8604F] shadow-xs' 
+                      : 'text-[#6B5645] hover:text-[#3D2B1F]'
                   }`}
                 >
                   Theo tên
@@ -177,7 +223,7 @@ export default function Book() {
               {readCount < chapters.length ? (
                 <button
                   onClick={() => handleMarkAll(true)}
-                  className="px-2.5 py-1.5 text-xs font-semibold text-green-700 dark:text-green-400 bg-green-50 hover:bg-green-100 dark:bg-green-950/40 dark:hover:bg-green-900/40 rounded-xl transition-colors flex items-center gap-1"
+                  className="px-3.5 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 rounded-full transition-colors flex items-center gap-1 cursor-pointer"
                   title="Đánh dấu tất cả chương là đã đọc"
                 >
                   <CheckCheck className="w-3.5 h-3.5" />
@@ -186,7 +232,7 @@ export default function Book() {
               ) : (
                 <button
                   onClick={() => handleMarkAll(false)}
-                  className="px-2.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                  className="px-3.5 py-1.5 text-xs font-bold text-[#6B5645] bg-[#F0E7D8] hover:bg-[#E4D9C8] rounded-full transition-colors cursor-pointer"
                   title="Bỏ đánh dấu tất cả chương"
                 >
                   Bỏ đánh dấu
@@ -196,31 +242,32 @@ export default function Book() {
           </div>
         )}
 
+        {/* Chapter Items List */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-            <Loader2 className="w-8 h-8 animate-spin mb-4 text-[#E06B65]" />
+          <div className="flex flex-col items-center justify-center py-20 text-[#6B5645]">
+            <Loader2 className="w-8 h-8 animate-spin mb-4 text-[#E8604F]" />
             <p className="font-medium">Đang tải danh sách chương...</p>
           </div>
         ) : error ? (
-          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-center border border-red-100">
+          <div className="bg-red-50 text-[#B54B3C] p-4 rounded-2xl text-center border border-red-100">
             <p>{error}</p>
             <button onClick={loadChapters} className="mt-2 text-sm font-semibold hover:underline cursor-pointer">Thử lại</button>
           </div>
         ) : chapters.length === 0 ? (
-          <div className="text-center py-20 text-gray-500 bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
-            <FileText className="w-12 h-12 mx-auto mb-4 opacity-20 text-[#E06B65]" />
-            <p className="font-semibold text-gray-700">Chưa có chương nào trong truyện</p>
-            <p className="text-sm text-gray-400 mt-1 mb-6">Thêm tệp chương vào thư mục truyện để bắt đầu đọc!</p>
+          <div className="text-center py-20 text-[#6B5645] bg-white border border-[#EFE6D8] rounded-[24px] p-8 shadow-chip space-y-3">
+            <FileText className="w-12 h-12 mx-auto opacity-30 text-[#E8604F]" />
+            <p className="font-display font-bold text-lg text-[#3D2B1F]">Chưa có chương nào trong bộ truyện này</p>
+            <p className="text-xs opacity-75">Thêm tệp chương vào thư mục truyện để bắt đầu đọc!</p>
             <button 
               onClick={() => setIsUploadOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#E06B65] hover:bg-[#C9534E] text-white font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer text-sm"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#E8604F] hover:bg-[#D6503F] text-white font-bold rounded-full transition-all shadow-chip active:scale-95 cursor-pointer text-xs"
             >
               <Upload className="w-4 h-4" />
-              Tải lên chương
+              Tải lên chương đầu tiên
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
+          <div className="bg-white rounded-[24px] shadow-chip border border-[#EFE6D8] overflow-hidden divide-y divide-[#EFE6D8]">
             {sortedChapters.map((chapter) => {
               const isRead = completedChapters[chapter.id];
               return (
@@ -234,8 +281,8 @@ export default function Book() {
                       bookName: bookName 
                     } 
                   })}
-                  className={`w-full text-left px-5 py-3.5 flex items-center gap-3 min-h-[64px] hover:bg-[#F7F5F0] active:bg-gray-100 transition-colors cursor-pointer ${
-                    isRead ? 'opacity-75 bg-[#F7F5F0]/50' : ''
+                  className={`w-full text-left px-5 py-4 flex items-center gap-3.5 min-h-[64px] hover:bg-[#FBF6EC] active:bg-[#F0E7D8] transition-colors cursor-pointer ${
+                    isRead ? 'opacity-70 bg-[#FBF6EC]/50' : ''
                   }`}
                 >
                   <button
@@ -244,29 +291,29 @@ export default function Book() {
                     title={isRead ? 'Đánh dấu chưa đọc' : 'Đánh dấu đã đọc'}
                   >
                     {isRead ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 fill-emerald-100" />
                     ) : (
-                      <Circle className="w-5 h-5 text-gray-300 hover:text-green-500" />
+                      <Circle className="w-5 h-5 text-[#6B5645] hover:text-emerald-600" />
                     )}
                   </button>
 
-                  <div className={`p-2 rounded-xl shrink-0 ${isRead ? 'bg-gray-100 text-gray-400' : 'bg-[#FDF3F2] text-[#E06B65]'}`}>
+                  <div className={`p-2.5 rounded-xl shrink-0 ${isRead ? 'bg-[#F0E7D8] text-[#6B5645]' : 'bg-[#E8604F]/10 text-[#E8604F]'}`}>
                     <FileText className="w-5 h-5" />
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <span className={`font-semibold block line-clamp-2 leading-snug ${isRead ? 'text-gray-400 line-through decoration-gray-300' : 'text-gray-800'}`}>
+                    <span className={`font-semibold text-sm sm:text-base block line-clamp-2 leading-snug ${isRead ? 'text-[#6B5645] line-through' : 'text-[#3D2B1F]'}`}>
                       {formatChapterName(chapter.name)}
                     </span>
                     {chapter.updatedAt && (
-                      <span className="text-[11px] text-gray-400 block">
-                        Cập nhật: {new Date(chapter.updatedAt).toLocaleDateString()}
+                      <span className="text-[11px] text-[#6B5645] block mt-0.5 font-medium">
+                        Cập nhật: {new Date(chapter.updatedAt).toLocaleDateString('vi-VN')}
                       </span>
                     )}
                   </div>
 
                   {isRead && (
-                    <span className="text-[11px] font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-md shrink-0">
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full shrink-0">
                       Đã đọc
                     </span>
                   )}
@@ -289,3 +336,4 @@ export default function Book() {
     </div>
   );
 }
+

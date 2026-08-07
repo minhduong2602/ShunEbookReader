@@ -234,29 +234,29 @@ export default function Reader() {
   };
 
   const themeClasses = {
-    light: 'bg-[#F9F9FB] text-gray-900',
-    dark: 'bg-[#121212] text-gray-300',
+    light: 'bg-[#FBF6EC] text-[#3D2B1F]',
+    dark: 'bg-[#2B2119] text-[#F5EFE3]',
     sepia: 'bg-[#F4ECD8] text-[#5B4636]',
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${themeClasses[theme]}`}>
+    <div className={`min-h-screen transition-colors duration-300 ${themeClasses[theme]} font-sans`}>
       {/* Top Bar Overlay */}
-      <div className={`fixed top-0 inset-x-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-sm z-50 transition-transform duration-300 ${showControls ? 'translate-y-0' : '-translate-y-full'}`}>
-        <div className="max-w-3xl mx-auto px-2 h-14 flex items-center gap-2">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10">
+      <div className={`fixed top-0 inset-x-0 bg-[#FBF6EC]/95 dark:bg-[#2B2119]/95 backdrop-blur-md shadow-chip z-50 transition-transform duration-300 ${showControls ? 'translate-y-0' : '-translate-y-full'} border-b border-[#EFE6D8]`}>
+        <div className="max-w-3xl mx-auto px-3 h-14 flex items-center gap-2">
+          <button onClick={() => navigate(-1)} className="p-2 rounded-full text-[#3D2B1F] dark:text-[#F5EFE3] hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
             <ChevronLeft className="w-6 h-6" />
           </button>
           <div className="flex-1 flex flex-col justify-center min-w-0">
-            <h1 className="text-sm font-medium truncate opacity-90">{currentActiveChapter || chapterName}</h1>
+            <h1 className="font-display text-sm font-bold truncate opacity-90 text-[#3D2B1F] dark:text-[#F5EFE3]">{currentActiveChapter || chapterName}</h1>
             {currentActiveChapter && currentActiveChapter !== chapterName && (
-              <span className="text-[10px] opacity-60 truncate">{chapterName}</span>
+              <span className="text-[10px] opacity-70 truncate text-[#6B5645] dark:text-[#E4D9C8]">{chapterName}</span>
             )}
           </div>
           {detectedChapters.length > 0 && (
             <button 
               onClick={(e) => { e.stopPropagation(); setShowTocDrawer(true); }} 
-              className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10"
+              className="p-2 rounded-full text-[#3D2B1F] dark:text-[#F5EFE3] hover:bg-black/5 dark:hover:bg-white/10"
               title="Table of Contents"
             >
               <List className="w-5 h-5" />
@@ -264,7 +264,7 @@ export default function Reader() {
           )}
           <button 
             onClick={(e) => { e.stopPropagation(); setShowHighlightsDrawer(true); }} 
-            className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10"
+            className="p-2 rounded-full text-[#3D2B1F] dark:text-[#F5EFE3] hover:bg-black/5 dark:hover:bg-white/10"
             title="Highlights & Notes"
           >
             <Bookmark className="w-5 h-5" />
@@ -273,7 +273,7 @@ export default function Reader() {
       </div>
 
       {/* Subtle bottom chapter indicator when controls are hidden */}
-      <div className={`fixed bottom-2 right-4 text-[10px] opacity-30 font-sans truncate max-w-[70%] transition-opacity duration-300 pointer-events-none z-40 ${showControls ? 'opacity-0' : 'opacity-40'}`}>
+      <div className={`fixed bottom-2 right-4 text-[10px] opacity-40 font-sans truncate max-w-[70%] transition-opacity duration-300 pointer-events-none z-40 ${showControls ? 'opacity-0' : 'opacity-60'}`}>
         {currentActiveChapter || chapterName}
       </div>
 
@@ -286,27 +286,27 @@ export default function Reader() {
         }}
       >
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-40 opacity-50">
-            <Loader2 className="w-8 h-8 animate-spin mb-4" />
-            <p>Loading content...</p>
+          <div className="flex flex-col items-center justify-center py-40 opacity-60 text-[#6B5645]">
+            <Loader2 className="w-8 h-8 animate-spin mb-4 text-[#E8604F]" />
+            <p className="font-bold">Đang tải nội dung...</p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-full mb-4">
+            <div className="bg-[#E8604F]/10 p-4 rounded-full mb-4">
               {error.includes('Failed to fetch') || error.includes('Network') || !navigator.onLine ? (
-                <WifiOff className="w-10 h-10 text-red-500 dark:text-red-400" />
+                <WifiOff className="w-10 h-10 text-[#E8604F]" />
               ) : error.includes('không được hỗ trợ') || error.includes('not supported') || error.includes('not found') ? (
-                <FileQuestion className="w-10 h-10 text-red-500 dark:text-red-400" />
+                <FileQuestion className="w-10 h-10 text-[#E8604F]" />
               ) : (
-                <AlertCircle className="w-10 h-10 text-red-500 dark:text-red-400" />
+                <AlertCircle className="w-10 h-10 text-[#E8604F]" />
               )}
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Failed to load chapter</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md">
+            <h3 className="text-lg font-bold text-[#3D2B1F] dark:text-[#F5EFE3] mb-2">Không thể tải chương sách</h3>
+            <p className="text-[#6B5645] dark:text-[#E4D9C8] mb-8 max-w-md text-sm">
               {error.includes('Failed to fetch') || error.includes('Network') || !navigator.onLine
-                ? "Network error. Please check your internet connection and try again."
+                ? "Lỗi kết nối mạng. Vui lòng kiểm tra internet và thử lại."
                 : error.includes('not found')
-                ? "This chapter could not be found. It may have been deleted or moved."
+                ? "Không tìm thấy chương này."
                 : error}
             </p>
             
@@ -314,26 +314,26 @@ export default function Reader() {
               {!(error.includes('không được hỗ trợ') || error.includes('not supported') || error.includes('not found')) && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); loadContent(); }} 
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#E06B65] hover:bg-[#C9534E] text-white rounded-xl transition-colors font-medium shadow-sm"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#E8604F] hover:bg-[#D6503F] text-white rounded-full transition-colors font-bold shadow-chip"
                 >
-                  <RefreshCw className="w-4 h-4" /> Try Again
+                  <RefreshCw className="w-4 h-4" /> Thử lại
                 </button>
               )}
               <button 
                 onClick={(e) => { e.stopPropagation(); navigate(-1); }} 
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl transition-colors font-medium shadow-sm"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-[#E4D9C8] text-[#3D2B1F] rounded-full transition-colors font-bold shadow-chip"
               >
-                <ArrowLeft className="w-4 h-4" /> Go Back
+                <ArrowLeft className="w-4 h-4" /> Quay lại
               </button>
             </div>
           </div>
         ) : (
           <div
-            className={`prose prose-lg max-w-none dark:prose-invert ${fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans'}`}
+            className={`prose prose-lg max-w-none ${fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans'}`}
             style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
           >
             {/* Chapter Header */}
-            <h1 className="text-center font-bold mb-10 opacity-80 pb-4 border-b border-gray-200 dark:border-gray-800" style={{ fontSize: `${Math.max(20, fontSize * 1.3)}px`, lineHeight: 1.4 }}>
+            <h1 className="font-display text-center font-bold mb-10 pb-4 border-b border-[#EFE6D8] dark:border-[#3D2B1F] text-[#3D2B1F] dark:text-[#F5EFE3]" style={{ fontSize: `${Math.max(22, fontSize * 1.3)}px`, lineHeight: 1.4 }}>
               {chapterName}
             </h1>
             
@@ -345,19 +345,19 @@ export default function Reader() {
             />
             
             {/* Prev/Next Navigation */}
-            <div className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row gap-4 justify-between">
+            <div className="mt-16 pt-8 border-t border-[#EFE6D8] dark:border-[#3D2B1F] flex flex-col sm:flex-row gap-4 justify-between">
               {prevChapter ? (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(`/read/${prevChapter.id}`, { state: { chapterName: prevChapter.name, mimeType: prevChapter.mimeType, bookId, bookName } });
                   }}
-                  className="flex items-center gap-2 px-6 py-4 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex-1 text-left"
+                  className="flex items-center gap-2 px-6 py-4 rounded-2xl bg-white dark:bg-white/5 border border-[#EFE6D8] dark:border-transparent hover:border-[#E8604F] transition-all flex-1 text-left shadow-chip"
                 >
-                  <ChevronLeft className="w-5 h-5 shrink-0" />
+                  <ChevronLeft className="w-5 h-5 shrink-0 text-[#E8604F]" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs opacity-60 uppercase tracking-wider font-sans">Previous</div>
-                    <div className="font-medium truncate text-sm mt-1">{formatChapterName(prevChapter.name)}</div>
+                    <div className="text-[10px] font-bold opacity-60 uppercase tracking-wider font-sans">Chương trước</div>
+                    <div className="font-bold truncate text-sm mt-1">{formatChapterName(prevChapter.name)}</div>
                   </div>
                 </button>
               ) : <div className="flex-1" />}
@@ -368,13 +368,13 @@ export default function Reader() {
                     e.stopPropagation();
                     navigate(`/read/${nextChapter.id}`, { state: { chapterName: nextChapter.name, mimeType: nextChapter.mimeType, bookId, bookName } });
                   }}
-                  className="flex items-center gap-2 px-6 py-4 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex-1 text-right justify-end"
+                  className="flex items-center gap-2 px-6 py-4 rounded-2xl bg-white dark:bg-white/5 border border-[#EFE6D8] dark:border-transparent hover:border-[#E8604F] transition-all flex-1 text-right justify-end shadow-chip"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs opacity-60 uppercase tracking-wider font-sans">Next</div>
-                    <div className="font-medium truncate text-sm mt-1">{formatChapterName(nextChapter.name)}</div>
+                    <div className="text-[10px] font-bold opacity-60 uppercase tracking-wider font-sans">Chương sau</div>
+                    <div className="font-bold truncate text-sm mt-1">{formatChapterName(nextChapter.name)}</div>
                   </div>
-                  <ChevronRight className="w-5 h-5 shrink-0" />
+                  <ChevronRight className="w-5 h-5 shrink-0 text-[#E8604F]" />
                 </button>
               ) : <div className="flex-1" />}
             </div>
@@ -383,12 +383,12 @@ export default function Reader() {
       </div>
 
       {/* Bottom Controls Overlay */}
-      <div className={`fixed bottom-0 inset-x-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.2)] z-50 transition-transform duration-300 pb-safe ${showControls ? 'translate-y-0' : 'translate-y-full'}`}>
-        <div className="max-w-3xl mx-auto p-4 space-y-6">
+      <div className={`fixed bottom-0 inset-x-0 bg-white/95 dark:bg-[#2B2119]/95 backdrop-blur-md shadow-chip border-t border-[#EFE6D8] z-50 transition-transform duration-300 pb-safe ${showControls ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className="max-w-3xl mx-auto p-4 space-y-5">
           
           {/* Font Controls */}
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-4 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-xl">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2 bg-[#F0E7D8] dark:bg-black/20 p-1.5 rounded-full">
               {[
                 { id: 'sans', label: 'Sans', fontClass: 'font-sans' },
                 { id: 'serif', label: 'Serif', fontClass: 'font-serif' },
@@ -397,46 +397,46 @@ export default function Reader() {
                 <button
                   key={font.id}
                   onClick={() => setFontFamily(font.id as any)}
-                  className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${fontFamily === font.id ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}`}
+                  className={`flex-1 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${fontFamily === font.id ? 'bg-white text-[#E8604F] shadow-chip' : 'text-[#6B5645] hover:text-[#3D2B1F]'}`}
                 >
                   <span className={font.fontClass}>{font.label}</span>
                 </button>
               ))}
             </div>
 
-            <div className="flex items-center gap-4 px-2">
-              <span className="text-sm font-medium opacity-50">A</span>
+            <div className="flex items-center gap-4 px-3">
+              <span className="text-xs font-bold opacity-60">A</span>
               <input
                 type="range"
                 min="12"
                 max="32"
                 value={fontSize}
                 onChange={(e) => setFontSize(Number(e.target.value))}
-                className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#E06B65]"
+                className="flex-1 h-2 bg-[#F0E7D8] dark:bg-black/20 rounded-lg appearance-none cursor-pointer accent-[#E8604F]"
               />
-              <span className="text-xl font-medium opacity-80">A</span>
+              <span className="text-xl font-bold opacity-90">A</span>
             </div>
           </div>
 
           {/* Theme Selection */}
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-3">
             <button
               onClick={() => setTheme('light')}
-              className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border ${theme === 'light' ? 'border-[#E06B65] bg-[#FDF3F2] text-[#E06B65]' : 'border-gray-200 dark:border-gray-700'}`}
+              className={`flex-1 py-2.5 rounded-full flex items-center justify-center gap-2 text-xs font-bold border transition-all cursor-pointer ${theme === 'light' ? 'border-[#E8604F] bg-[#E8604F]/10 text-[#E8604F]' : 'border-[#E4D9C8]'}`}
             >
-              <Sun className="w-5 h-5" /> Light
+              <Sun className="w-4 h-4" /> Cozy Paper
             </button>
             <button
               onClick={() => setTheme('sepia')}
-              className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border text-[#a6c6ff] ${theme === 'sepia' ? 'border-[#8B6B4A] bg-[#F4ECD8]' : 'border-gray-200 dark:border-gray-700'}`}
+              className={`flex-1 py-2.5 rounded-full flex items-center justify-center gap-2 text-xs font-bold border transition-all cursor-pointer ${theme === 'sepia' ? 'border-[#8B6B4A] bg-[#F4ECD8] text-[#5B4636]' : 'border-[#E4D9C8]'}`}
             >
-              <Coffee className="w-5 h-5" /> Sepia
+              <Coffee className="w-4 h-4" /> Sepia
             </button>
             <button
               onClick={() => setTheme('dark')}
-              className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border ${theme === 'dark' ? 'border-[#E06B65] bg-gray-800 text-white' : 'border-gray-200 dark:border-gray-700'}`}
+              className={`flex-1 py-2.5 rounded-full flex items-center justify-center gap-2 text-xs font-bold border transition-all cursor-pointer ${theme === 'dark' ? 'border-[#E8604F] bg-[#2B2119] text-[#F5EFE3]' : 'border-[#E4D9C8]'}`}
             >
-              <Moon className="w-5 h-5" /> Dark
+              <Moon className="w-4 h-4" /> Night
             </button>
           </div>
         </div>

@@ -134,29 +134,29 @@ export default function NotesTab() {
   };
 
   const colors = [
-    { name: 'Coral', value: 'bg-[#E06B65]' },
-    { name: 'Sage', value: 'bg-[#5B8C7B]' },
-    { name: 'Slate', value: 'bg-[#7B95B1]' },
-    { name: 'Golden', value: 'bg-[#D1A054]' },
-    { name: 'Mauve', value: 'bg-[#9F838C]' },
-    { name: 'Olive', value: 'bg-[#4A5D23]' },
+    { name: 'Coral', value: 'bg-[#E8604F]' },
+    { name: 'Purple', value: 'bg-[#8D7FC4]' },
+    { name: 'Blue', value: 'bg-[#4A7FC1]' },
+    { name: 'Amber', value: 'bg-[#EDB65B]' },
+    { name: 'Green', value: 'bg-[#7BAA5C]' },
+    { name: 'Teal', value: 'bg-[#4FA6A8]' },
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full -mb-4">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full -mb-4 font-sans">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
         {filteredNotes.length === 0 ? (
-          <div className="text-center py-20 text-gray-500 bg-white/50 border border-white/60 rounded-3xl p-8 shadow-sm">
-            <p className="font-medium text-gray-600 dark:text-gray-300">
-              "No notes yet."
+          <div className="text-center py-20 text-[#6B5645] bg-white border border-[#E4D9C8] rounded-3xl p-8 shadow-chip">
+            <p className="font-display text-lg font-bold text-[#3D2B1F]">
+              Chưa có ghi chú nào
             </p>
-            <p className="text-sm text-gray-400 mt-1">Start typing below to add a quick note!</p>
+            <p className="text-sm text-[#6B5645] mt-1">Bắt đầu nhập nội dung bên dưới để lưu ghi chú mượt mà!</p>
           </div>
         ) : (
           filteredNotes.map((note, index) => {
             const isEditing = editingId === note.id;
-            const oldColors: Record<string, string> = { 'bg-blue-600': 'bg-[#E06B65]', 'bg-purple-600': 'bg-[#9F838C]', 'bg-emerald-600': 'bg-[#5B8C7B]', 'bg-orange-600': 'bg-[#D1A054]', 'bg-rose-600': 'bg-[#E06B65]', 'bg-slate-700': 'bg-[#7B95B1]' };
-            const bgClass = oldColors[note.color || ''] || note.color || 'bg-[#E06B65]';
+            const oldColors: Record<string, string> = { 'bg-blue-600': 'bg-[#4A7FC1]', 'bg-purple-600': 'bg-[#8D7FC4]', 'bg-emerald-600': 'bg-[#7BAA5C]', 'bg-orange-600': 'bg-[#EDB65B]', 'bg-rose-600': 'bg-[#E8604F]', 'bg-slate-700': 'bg-[#3D2B1F]' };
+            const bgClass = oldColors[note.color || ''] || note.color || 'bg-[#E8604F]';
             const links = getLinks(note.text);
             const showPinDivider = index > 0 && filteredNotes[index - 1].pinned && !note.pinned;
 
@@ -164,16 +164,16 @@ export default function NotesTab() {
               <React.Fragment key={note.id}>
                 {showPinDivider && (
                   <div className="flex items-center gap-4 my-6 opacity-60">
-                    <div className="h-px bg-gray-200 flex-1"></div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Unpinned Notes</span>
-                    <div className="h-px bg-gray-200 flex-1"></div>
+                    <div className="h-px bg-[#EFE6D8] flex-1"></div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#6B5645]">Ghi chú khác</span>
+                    <div className="h-px bg-[#EFE6D8] flex-1"></div>
                   </div>
                 )}
                 <div className="flex justify-end">
-                  <div className={`${bgClass} text-white p-3 rounded-2xl rounded-tr-sm w-[85%] sm:max-w-[75%] shadow-sm relative group transition-colors flex flex-col`}>
+                  <div className={`${bgClass} text-white p-4 rounded-2xl rounded-tr-xs w-[88%] sm:max-w-[75%] shadow-chip relative group transition-all hover:shadow-md flex flex-col`}>
                     
                     {note.pinned && (
-                      <div className="absolute -top-2 -left-2 bg-yellow-400 text-yellow-900 p-1.5 rounded-full shadow-md z-10" title="Pinned Note">
+                      <div className="absolute -top-2 -left-2 bg-[#EDB65B] text-[#3D2B1F] p-1.5 rounded-full shadow-md z-10" title="Ghi chú đã ghim">
                         <Pin className="w-3.5 h-3.5 fill-current" />
                       </div>
                     )}
@@ -183,22 +183,22 @@ export default function NotesTab() {
                         <textarea
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
-                          className="w-full bg-black/20 text-white border-none rounded-lg p-2 text-sm focus:ring-1 focus:ring-white resize-none"
+                          className="w-full bg-black/20 text-white border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-white outline-none resize-none"
                           rows={4}
                           autoFocus
                         />
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => setEditingId(null)} className="p-1.5 hover:bg-black/20 rounded-lg transition-colors flex items-center justify-center">
+                          <button onClick={() => setEditingId(null)} className="p-1.5 hover:bg-black/20 rounded-xl transition-colors flex items-center justify-center">
                             <X className="w-4 h-4" />
                           </button>
-                          <button onClick={saveEdit} className="p-1.5 hover:bg-black/30 bg-black/20 rounded-lg transition-colors flex items-center justify-center">
+                          <button onClick={saveEdit} className="p-1.5 hover:bg-black/30 bg-black/20 rounded-xl transition-colors flex items-center justify-center">
                             <Check className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
                     ) : (
                       <>
-                        <div className="text-sm leading-relaxed break-words prose prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-a:text-white prose-a:underline prose-li:my-0">
+                        <div className="text-sm leading-relaxed break-words prose prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-a:text-white prose-a:underline prose-li:my-0 font-sans">
                           <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                             {note.text}
                           </ReactMarkdown>
@@ -213,21 +213,21 @@ export default function NotesTab() {
                           </div>
                         )}
 
-                        <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/20 gap-4">
+                        <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-white/20 gap-4">
                           <span className="text-[10px] opacity-80 font-medium tracking-wide">{formatTime(note.timestamp)}</span>
                           
                           <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                             {/* Color Picker */}
                             <div className="relative group/color">
-                              <button className="p-1.5 hover:bg-black/20 rounded-lg transition-colors" title="Change Color">
+                              <button className="p-1.5 hover:bg-black/20 rounded-lg transition-colors" title="Đổi màu">
                                 <Palette className="w-3.5 h-3.5 opacity-90" />
                               </button>
-                              <div className="absolute bottom-full right-0 mb-1 hidden group-hover/color:flex bg-white p-2 rounded-xl shadow-xl gap-1.5 border border-gray-100 border-gray-100 z-20">
+                              <div className="absolute bottom-full right-0 mb-1 hidden group-hover/color:flex bg-white p-2 rounded-2xl shadow-xl gap-1.5 border border-[#EFE6D8] z-20">
                                 {colors.map(c => (
                                   <button
                                     key={c.value}
                                     onClick={() => changeColor(note.id, c.value)}
-                                    className={`w-6 h-6 rounded-full ${c.value} border-2 ${bgClass === c.value ? 'border-gray-900 border-gray-900 shadow-inner' : 'border-transparent hover:scale-110'} transition-transform`}
+                                    className={`w-6 h-6 rounded-full ${c.value} border-2 ${bgClass === c.value ? 'border-[#3D2B1F] shadow-inner' : 'border-transparent hover:scale-110'} transition-transform`}
                                     title={c.name}
                                   />
                                 ))}
@@ -237,31 +237,30 @@ export default function NotesTab() {
                             <button 
                               onClick={() => togglePin(note.id, note.pinned)}
                               className="p-1.5 hover:bg-black/20 rounded-lg transition-colors"
-                              title={note.pinned ? "Unpin Note" : "Pin Note"}
+                              title={note.pinned ? "Bỏ ghim" : "Ghim ghi chú"}
                             >
                               <Pin className={`w-3.5 h-3.5 ${note.pinned ? 'fill-current opacity-100' : 'opacity-90'}`} />
                             </button>
                             <button 
                               onClick={() => {
                                 navigator.clipboard.writeText(note.text);
-                                // could add local toast here but keeping it simple for now
                               }}
                               className="p-1.5 hover:bg-black/20 rounded-lg transition-colors"
-                              title="Copy Note"
+                              title="Sao chép"
                             >
                               <Copy className="w-3.5 h-3.5 opacity-90" />
                             </button>
                             <button 
                               onClick={() => handleEdit(note.id, note.text)}
                               className="p-1.5 hover:bg-black/20 rounded-lg transition-colors"
-                              title="Edit Note"
+                              title="Sửa"
                             >
                               <Pencil className="w-3.5 h-3.5 opacity-90" />
                             </button>
                             <button 
                               onClick={() => handleDelete(note.id)}
                               className="p-1.5 hover:bg-black/20 hover:text-red-200 rounded-lg transition-colors"
-                              title="Delete Note"
+                              title="Xóa"
                             >
                               <Trash2 className="w-3.5 h-3.5 opacity-90" />
                             </button>
@@ -278,7 +277,7 @@ export default function NotesTab() {
         <div ref={bottomRef} />
       </div>
 
-      <div className="p-4 bg-transparent border-t border-gray-200/60 mt-4">
+      <div className="p-4 bg-transparent border-t border-[#EFE6D8] mt-2">
         <form onSubmit={handleSubmit} className="flex gap-2 max-w-4xl mx-auto items-end">
           <textarea
             value={text}
@@ -289,16 +288,16 @@ export default function NotesTab() {
                 handleSubmit(e);
               }
             }}
-            placeholder="Type a quick note or paste a link... (Shift+Enter for newline)"
-            className="flex-1 bg-white border border-gray-100 rounded-2xl px-5 py-3.5 text-sm focus:ring-2 focus:ring-[#E06B65]/30 placeholder-gray-500 shadow-sm resize-none min-h-[50px] max-h-[150px] outline-none"
+            placeholder="Nhập ghi chú hoặc dán liên kết... (Shift+Enter để xuống dòng)"
+            className="flex-1 bg-white border border-[#E4D9C8] rounded-2xl px-5 py-3.5 text-sm text-[#3D2B1F] focus:ring-2 focus:ring-[#E8604F]/30 placeholder-[#6B5645] shadow-chip resize-none min-h-[50px] max-h-[150px] outline-none transition-shadow"
             rows={1}
           />
           <button
             type="submit"
             disabled={!text.trim()}
-            className="bg-[#E06B65] hover:bg-[#C9534E] disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl p-3.5 transition-colors shrink-0 shadow-sm flex items-center justify-center h-[50px]"
+            className="bg-[#E8604F] hover:bg-[#D6503F] disabled:opacity-50 text-white rounded-full p-3.5 transition-all shrink-0 shadow-chip flex items-center justify-center h-[50px] w-[50px] active:scale-95 cursor-pointer"
           >
-            <Send className="w-5 h-5 ml-0.5" />
+            <Send className="w-5 h-5" />
           </button>
         </form>
       </div>
