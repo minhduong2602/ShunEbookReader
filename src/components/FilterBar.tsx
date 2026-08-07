@@ -103,16 +103,16 @@ export const FilterBar: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Row 3: Tag cloud (all available tags) */}
+      {/* Row 3: Tag cloud (Max 10 tags with overflow-x horizontal scroll) */}
       {allTags.length > 0 && (
-        <div className="flex gap-1.5 flex-wrap">
-          {allTags.map((tag) => (
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+          {allTags.slice(0, 10).map((tag) => (
             <button
               key={tag}
               onClick={() => onTagToggle(tag)}
-              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+              className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
                 activeTags.includes(tag)
-                  ? 'bg-[#8D7FC4] text-white border-[#8D7FC4]'
+                  ? 'bg-[#8D7FC4] text-white border-[#8D7FC4] shadow-xs'
                   : 'bg-white text-[#6B5645] border-[#EFE6D8] hover:border-[#8D7FC4]/40'
               }`}
             >

@@ -166,7 +166,7 @@ export default function Bookshelf() {
 
 
   return (
-    <div className="min-h-screen bg-[#E7DDCE] text-[#3D2B1F] flex flex-col lg:flex-row overflow-x-hidden font-sans">
+    <div className="h-screen w-full bg-[#E7DDCE] text-[#3D2B1F] flex flex-col lg:flex-row overflow-hidden font-sans">
       
       {/* 1. DESKTOP SIDEBAR RAIL (72px) & MOBILE OVERLAY */}
       {isSidebarOpen && (
@@ -177,7 +177,7 @@ export default function Bookshelf() {
       )}
 
       {/* Sidebar Rail */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-20 lg:w-[72px] bg-white border-r border-[#EFE6D8] flex flex-col justify-between items-center py-6 px-2 h-screen shrink-0 transform transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} shadow-chip`}>
+      <aside className={`fixed lg:sticky top-0 left-0 z-50 w-20 lg:w-[72px] bg-white border-r border-[#EFE6D8] flex flex-col justify-between items-center py-6 px-2 h-screen shrink-0 transform transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} shadow-chip`}>
         {/* Top: Avatar & App Logo */}
         <div className="flex flex-col items-center gap-6">
           <div className="w-11 h-11 rounded-full bg-[#E8604F] text-white flex items-center justify-center font-display font-bold text-lg shadow-chip cursor-pointer" title={userName || 'User'}>
@@ -261,7 +261,7 @@ export default function Bookshelf() {
 
 
       {/* 2. MAIN CATALOG APP CANVAS (#FBF6EC) */}
-      <main className="flex-1 bg-[#FBF6EC] min-h-screen p-4 sm:p-6 lg:p-8 overflow-y-auto pb-24 lg:pb-8">
+      <main className="flex-1 bg-[#FBF6EC] h-screen overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">
         <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
           
           {/* Header & Greeting Bar */}
@@ -269,9 +269,10 @@ export default function Bookshelf() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsSidebarOpen(true)}
-                className="lg:hidden p-2.5 bg-white border border-[#EFE6D8] rounded-2xl text-[#3D2B1F] shadow-chip"
+                className="lg:hidden p-2.5 bg-white/95 backdrop-blur-md border border-[#EFE6D8] rounded-2xl text-[#3D2B1F] shadow-chip cursor-pointer shrink-0 active:scale-95 transition-transform"
+                title="Mở Menu"
               >
-                <Menu className="w-5 h-5" />
+                <Menu className="w-5 h-5 text-[#3D2B1F]" />
               </button>
 
               <div>

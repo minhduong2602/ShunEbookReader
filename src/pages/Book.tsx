@@ -56,6 +56,20 @@ export default function Book() {
     || bookCollections[decodeURIComponent(bookId)]
     || null;
 
+  const handleAddTagString = (input: string) => {
+    if (!input) return;
+    const splitted = input
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean);
+    if (splitted.length === 0) return;
+
+    const current = currentMeta.tags || [];
+    const updated = Array.from(new Set([...current, ...splitted]));
+    setBookMetadata(bookId, { tags: updated });
+    setTagInput('');
+  };
+
   useEffect(() => {
     if (id) {
       loadChapters();
@@ -238,6 +252,24 @@ export default function Book() {
               </div>
             </div>
 
+            {/* Tags (comma separated) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[#6B5645] uppercase tracking-wider flex items-center gap-1">
+                <Tag className="w-3.5 h-3.5 text-[#E8604F]" /> Tags thể loại (phân cách bằng dấu phẩy)
+              </label>
+              <input
+                type="text"
+                placeholder="vd: Tiên Hiệp, Huyền Huyễn, Xuyên Không"
+                value={(currentMeta.tags || []).join(', ')}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const parsed = raw.split(',').map(t => t.trim()).filter(Boolean);
+                  setBookMetadata(bookId, { tags: parsed });
+                }}
+                className="w-full px-4 py-2.5 bg-white border border-[#EFE6D8] rounded-xl text-sm font-medium text-[#3D2B1F] outline-none focus:ring-2 focus:ring-[#E8604F]/30"
+              />
+            </div>
+
             {/* Description */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-[#6B5645] uppercase tracking-wider">Giới thiệu / Mô tả bộ truyện</label>
@@ -369,30 +401,25 @@ export default function Book() {
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Thêm tag (vd: fantasy, romance...)"
+                placeholder="Thêm tag (dùng dấu phẩy: fantasy, romance...)"
                 value={tagInput}
-                onChange={e => setTagInput(e.target.value)}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val.includes(',')) {
+                    handleAddTagString(val);
+                  } else {
+                    setTagInput(val);
+                  }
+                }}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && tagInput.trim()) {
-                    const current = currentMeta.tags || [];
-                    if (!current.includes(tagInput.trim())) {
-                      setBookMetadata(bookId, { tags: [...current, tagInput.trim()] });
-                    }
-                    setTagInput('');
+                    handleAddTagString(tagInput.trim());
                   }
                 }}
-                className="px-3 py-1.5 bg-[#F9F5EE] border border-[#EFE6D8] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#E8604F] w-64"
+                className="px-3 py-1.5 bg-[#F9F5EE] border border-[#EFE6D8] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#E8604F] w-72"
               />
               <button
-                onClick={() => {
-                  if (tagInput.trim()) {
-                    const current = currentMeta.tags || [];
-                    if (!current.includes(tagInput.trim())) {
-                      setBookMetadata(bookId, { tags: [...current, tagInput.trim()] });
-                    }
-                    setTagInput('');
-                  }
-                }}
+                onClick={() => handleAddTagString(tagInput.trim())}
                 className="px-3 py-1.5 bg-[#8D7FC4] text-white text-xs font-bold rounded-xl hover:bg-[#7D6FB4] cursor-pointer"
               >
                 Thêm tag
