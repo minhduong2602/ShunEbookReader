@@ -1,7 +1,7 @@
 import { useState, useEffect, MouseEvent } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ChevronLeft, FileText, Loader2, Upload, CheckCircle2, Circle, ArrowUpDown, CheckCheck, BookCheck, Sparkles } from 'lucide-react';
-import { useStore } from '../store';
+import { ChevronLeft, FileText, Loader2, Upload, CheckCircle2, Circle, ArrowUpDown, CheckCheck, BookCheck, Sparkles, Star, Tag, BookOpen, X } from 'lucide-react';
+import { useStore, BookShelf } from '../store';
 import { getFiles, DriveFile } from '../lib/drive';
 import { formatChapterName } from '../lib/utils';
 import UploadModal from '../components/UploadModal';
@@ -19,7 +19,9 @@ export default function Book() {
     toggleBookCompleted, 
     toggleChapterCompleted, 
     markAllChaptersCompleted,
-    triggerSyncToDrive 
+    triggerSyncToDrive,
+    bookCollections, setBookCollection,
+    bookMetadata, setBookMetadata,
   } = useStore();
 
   const [chapters, setChapters] = useState<DriveFile[]>([]);
@@ -35,6 +37,8 @@ export default function Book() {
   
   // Upload modal state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const [showReview, setShowReview] = useState(false);
 
   const bookId = id || '';
   const bookName = location.state?.bookName || decodeURIComponent(id || 'Book Chapters');
@@ -176,6 +180,123 @@ export default function Book() {
                 ✨ Hoàn thành: {chapters.length > 0 ? Math.round((readCount / chapters.length) * 100) : 0}%
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* Phase 2: Book Metadata Panel */}
+        <div className="bg-white rounded-[24px] p-5 border border-[#EFE6D8] shadow-chip space-y-4">
+          <h2 className="font-display text-base font-bold text-[#3D2B1F]">Đánh giá & Ghi chú cá nhân</h2>
+
+          {/* Rating */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#6B5645] uppercase tracking-wider">Đánh giá</label>
+            <div className="flex items-center gap-1.5">
+              {[1,2,3,4,5].map(s => (
+                <button
+                  key={s}
+                  onClick={() => setBookMetadata(bookId, { rating: bookMetadata[bookId]?.rating === s ? 0 : s })}
+                  className="transition-transform hover:scale-110 active:scale-95 cursor-pointer"
+                >
+                  <Star className={`w-7 h-7 ${s <= (bookMetadata[bookId]?.rating || 0) ? 'text-[#EDB65B] fill-[#EDB65B]' : 'text-[#E4D9C8]'}`} />
+                </button>
+              ))}
+              {bookMetadata[bookId]?.rating > 0 && (
+                <span className="text-xs font-bold text-[#6B5645] ml-2">{bookMetadata[bookId].rating}/5</span>
+              )}
+            </div>
+          </div>
+
+          {/* Shelf selector */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#6B5645] uppercase tracking-wider">Kệ sách</label>
+            <div className="flex flex-wrap gap-2">
+              {([
+                { value: 'reading',   label: '📖 Đang đọc' },
+                { value: 'want',      label: '🔖 Muốn đọc' },
+                { value: 'completed', label: '✅ Đã xong' },
+                { value: 'dropped',   label: '⏸ Tạm dừng' },
+              ] as { value: BookShelf; label: string }[]).map(shelf => (
+                <button
+                  key={shelf.value}
+                  onClick={() => setBookCollection(bookId, bookCollections[bookId] === shelf.value ? null : shelf.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
+                    bookCollections[bookId] === shelf.value
+                      ? 'bg-[#E8604F] text-white border-[#E8604F]'
+                      : 'border-[#EFE6D8] text-[#6B5645] hover:border-[#E8604F]/40'
+                  }`}
+                >
+                  {shelf.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#6B5645] uppercase tracking-wider flex items-center gap-1">
+              <Tag className="w-3 h-3" /> Tags
+            </label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {(bookMetadata[bookId]?.tags || []).map(tag => (
+                <span key={tag} className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#8D7FC4]/15 text-[#8D7FC4] text-[11px] font-bold border border-[#8D7FC4]/25">
+                  #{tag}
+                  <button onClick={() => setBookMetadata(bookId, { tags: bookMetadata[bookId].tags.filter(t => t !== tag) })} className="ml-0.5 opacity-60 hover:opacity-100">
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Thêm tag (vd: fantasy, romance...)"
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && tagInput.trim()) {
+                    const current = bookMetadata[bookId]?.tags || [];
+                    if (!current.includes(tagInput.trim())) {
+                      setBookMetadata(bookId, { tags: [...current, tagInput.trim()] });
+                    }
+                    setTagInput('');
+                  }
+                }}
+                className="flex-1 px-3 py-2 bg-[#F0E7D8] rounded-full text-xs text-[#3D2B1F] outline-none focus:ring-2 focus:ring-[#8D7FC4]/30"
+              />
+              <button
+                onClick={() => {
+                  if (tagInput.trim()) {
+                    const current = bookMetadata[bookId]?.tags || [];
+                    if (!current.includes(tagInput.trim())) {
+                      setBookMetadata(bookId, { tags: [...current, tagInput.trim()] });
+                    }
+                    setTagInput('');
+                  }
+                }}
+                className="px-3 py-2 bg-[#8D7FC4] text-white text-xs font-bold rounded-full cursor-pointer hover:bg-[#7A6DB5] transition-colors"
+              >
+                Thêm
+              </button>
+            </div>
+          </div>
+
+          {/* Review */}
+          <div className="space-y-1.5">
+            <button
+              onClick={() => setShowReview(r => !r)}
+              className="text-xs font-bold text-[#6B5645] uppercase tracking-wider flex items-center gap-1 cursor-pointer hover:text-[#3D2B1F]"
+            >
+              <BookOpen className="w-3 h-3" /> Ghi chú / Review {showReview ? '▲' : '▼'}
+            </button>
+            {showReview && (
+              <textarea
+                placeholder="Viết cảm nhận, ghi chú về cuốn sách này..."
+                value={bookMetadata[bookId]?.review || ''}
+                onChange={e => setBookMetadata(bookId, { review: e.target.value })}
+                rows={4}
+                className="w-full px-4 py-3 bg-[#F0E7D8] rounded-2xl text-sm text-[#3D2B1F] outline-none focus:ring-2 focus:ring-[#E8604F]/30 resize-none leading-relaxed"
+              />
+            )}
           </div>
         </div>
 

@@ -1,0 +1,5 @@
+Welcome to your brand new R2 Novel Reader!
+
+This is a sample chapter to get you started. You can upload your own novel files (.txt, .docx, .html) using the upload button on the bookshelf.
+
+Enjoy reading!

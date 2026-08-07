@@ -26,6 +26,40 @@ export interface QuickNote {
   color?: string;
 }
 
+// Phase 4: Custom Theme
+export interface CustomTheme {
+  id: string;
+  name: string;
+  bg: string;
+  text: string;
+  accent: string;
+  surface: string;
+}
+
+// Phase 2: Book metadata
+export interface BookMetadata {
+  rating: number;      // 0–5
+  tags: string[];
+  review: string;
+}
+
+export type BookShelf = 'reading' | 'completed' | 'dropped' | 'want';
+
+export type ReaderTexture = 'none' | 'paper' | 'linen' | 'aged';
+export type BookshelfLayout = 'grid' | 'list' | 'compact';
+
+export interface HomeSection {
+  key: string;
+  label: string;
+  visible: boolean;
+}
+
+const DEFAULT_HOME_SECTIONS: HomeSection[] = [
+  { key: 'promo', label: 'Banner khám phá', visible: true },
+  { key: 'recent', label: 'Đọc gần đây', visible: true },
+  { key: 'new', label: 'Sách mới cập nhật', visible: true },
+];
+
 interface AppState {
   token: string | null;
   folderId: string | null;
@@ -44,6 +78,17 @@ interface AppState {
   isSessionExpired: boolean;
   isSyncing: boolean;
   lastSyncedAt: number;
+
+  // Phase 4: Customization
+  customThemes: CustomTheme[];
+  readerTexture: ReaderTexture;
+  bookshelfLayout: BookshelfLayout;
+  homeSections: HomeSection[];
+
+  // Phase 2: Library
+  bookCollections: Record<string, BookShelf>;
+  bookMetadata: Record<string, BookMetadata>;
+
   setToken: (token: string | null) => void;
   setFolderId: (id: string) => void;
   setClientId: (id: string) => void;
@@ -68,6 +113,17 @@ interface AppState {
   loadSyncFromDrive: () => Promise<void>;
   triggerSyncToDrive: () => Promise<void>;
   logout: () => void;
+
+  // Phase 4 actions
+  saveCustomTheme: (theme: CustomTheme) => void;
+  deleteCustomTheme: (themeId: string) => void;
+  setReaderTexture: (texture: ReaderTexture) => void;
+  setBookshelfLayout: (layout: BookshelfLayout) => void;
+  toggleHomeSection: (key: string) => void;
+
+  // Phase 2 actions
+  setBookCollection: (bookId: string, shelf: BookShelf | null) => void;
+  setBookMetadata: (bookId: string, updates: Partial<BookMetadata>) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -88,6 +144,17 @@ export const useStore = create<AppState>((set, get) => ({
   isSessionExpired: false,
   isSyncing: false,
   lastSyncedAt: 0,
+
+  // Phase 4 initial state
+  customThemes: JSON.parse(localStorage.getItem('reader_custom_themes') || '[]'),
+  readerTexture: (localStorage.getItem('reader_texture') as ReaderTexture) || 'none',
+  bookshelfLayout: (localStorage.getItem('reader_bookshelf_layout') as BookshelfLayout) || 'grid',
+  homeSections: JSON.parse(localStorage.getItem('reader_home_sections') || 'null') || DEFAULT_HOME_SECTIONS,
+
+  // Phase 2 initial state
+  bookCollections: JSON.parse(localStorage.getItem('reader_book_collections') || '{}'),
+  bookMetadata: JSON.parse(localStorage.getItem('reader_book_metadata') || '{}'),
+
 
   setToken: (token) => {
     if (token) localStorage.setItem('drive_token', token);
@@ -296,5 +363,63 @@ export const useStore = create<AppState>((set, get) => ({
   logout: () => {
     localStorage.removeItem('drive_token');
     set({ token: null, isSessionExpired: false });
-  }
+  },
+
+  // ─── Phase 4 Actions ────────────────────────────────────────────────────
+  saveCustomTheme: (theme) => {
+    set((state) => {
+      const existing = state.customThemes.findIndex(t => t.id === theme.id);
+      const newThemes = existing >= 0
+        ? state.customThemes.map(t => t.id === theme.id ? theme : t)
+        : [...state.customThemes, theme];
+      localStorage.setItem('reader_custom_themes', JSON.stringify(newThemes));
+      return { customThemes: newThemes };
+    });
+  },
+  deleteCustomTheme: (themeId) => {
+    set((state) => {
+      const newThemes = state.customThemes.filter(t => t.id !== themeId);
+      localStorage.setItem('reader_custom_themes', JSON.stringify(newThemes));
+      return { customThemes: newThemes };
+    });
+  },
+  setReaderTexture: (texture) => {
+    localStorage.setItem('reader_texture', texture);
+    set({ readerTexture: texture });
+  },
+  setBookshelfLayout: (layout) => {
+    localStorage.setItem('reader_bookshelf_layout', layout);
+    set({ bookshelfLayout: layout });
+  },
+  toggleHomeSection: (key) => {
+    set((state) => {
+      const newSections = state.homeSections.map(s =>
+        s.key === key ? { ...s, visible: !s.visible } : s
+      );
+      localStorage.setItem('reader_home_sections', JSON.stringify(newSections));
+      return { homeSections: newSections };
+    });
+  },
+
+  // ─── Phase 2 Actions ────────────────────────────────────────────────────
+  setBookCollection: (bookId, shelf) => {
+    set((state) => {
+      const newCollections = { ...state.bookCollections };
+      if (shelf === null) {
+        delete newCollections[bookId];
+      } else {
+        newCollections[bookId] = shelf;
+      }
+      localStorage.setItem('reader_book_collections', JSON.stringify(newCollections));
+      return { bookCollections: newCollections };
+    });
+  },
+  setBookMetadata: (bookId, updates) => {
+    set((state) => {
+      const current = state.bookMetadata[bookId] || { rating: 0, tags: [], review: '' };
+      const newMeta = { ...state.bookMetadata, [bookId]: { ...current, ...updates } };
+      localStorage.setItem('reader_book_metadata', JSON.stringify(newMeta));
+      return { bookMetadata: newMeta };
+    });
+  },
 }));

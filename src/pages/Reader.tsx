@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Type, Moon, Sun, Coffee, Loader2, AlertCircle, WifiOff, FileQuestion, ArrowLeft, RefreshCw, MessageSquare, Bookmark, Navigation, List } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Type, Moon, Sun, Coffee, Loader2, AlertCircle, WifiOff, FileQuestion, ArrowLeft, RefreshCw, MessageSquare, Bookmark, Navigation, List, Maximize2 } from 'lucide-react';
 import Mark from 'mark.js';
 import { useStore } from '../store';
 import { getFileContent } from '../lib/drive';
 import { detectChapters, ChapterMarker } from '../lib/chapters';
 import { formatChapterName } from '../lib/utils';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 const MemoizedContent = memo(({ 
   isHtmlContent, 
@@ -36,7 +37,7 @@ export default function Reader() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { token, logout, fontSize, theme, fontFamily, setFontFamily, setFontSize, setTheme, currentBookChapters, scrollPositions, setScrollPosition, addHighlight, highlights, removeHighlight, updateReadHistory, setChapterCompleted, triggerSyncToDrive } = useStore();
+  const { token, logout, fontSize, theme, fontFamily, setFontFamily, setFontSize, setTheme, currentBookChapters, scrollPositions, setScrollPosition, addHighlight, highlights, removeHighlight, updateReadHistory, setChapterCompleted, triggerSyncToDrive, readerTexture, setReaderTexture } = useStore();
 
   const [content, setContent] = useState('');
   const [processedContent, setProcessedContent] = useState('');
@@ -53,6 +54,7 @@ export default function Reader() {
   const [noteText, setNoteText] = useState('');
   const [selectedColor, setSelectedColor] = useState('#FFD54F');
   const [showHighlightsDrawer, setShowHighlightsDrawer] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
 
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -65,6 +67,38 @@ export default function Reader() {
   const currentIndex = currentBookChapters.findIndex(c => c.id === id);
   const prevChapter = currentIndex > 0 ? currentBookChapters[currentIndex - 1] : null;
   const nextChapter = currentIndex !== -1 && currentIndex < currentBookChapters.length - 1 ? currentBookChapters[currentIndex + 1] : null;
+
+  const THEMES: Array<'light' | 'dark' | 'sepia'> = ['light', 'sepia', 'dark'];
+
+  const cycleTheme = useCallback(() => {
+    const idx = THEMES.indexOf(theme);
+    setTheme(THEMES[(idx + 1) % THEMES.length]);
+  }, [theme, setTheme]);
+
+  const goToPrevChapter = useCallback(() => {
+    if (prevChapter) navigate(`/read/${prevChapter.id}`, { state: { chapterName: prevChapter.name, mimeType: prevChapter.mimeType, bookId, bookName } });
+  }, [prevChapter, navigate, bookId, bookName]);
+
+  const goToNextChapter = useCallback(() => {
+    if (nextChapter) navigate(`/read/${nextChapter.id}`, { state: { chapterName: nextChapter.name, mimeType: nextChapter.mimeType, bookId, bookName } });
+  }, [nextChapter, navigate, bookId, bookName]);
+
+  useKeyboardShortcuts([
+    { key: 'F', handler: () => setIsFocusMode(f => !f) },
+    { key: 'f', handler: () => setIsFocusMode(f => !f) },
+    { key: 'B', handler: () => { if (id) setScrollPosition(id, window.scrollY); } },
+    { key: 'b', handler: () => { if (id) setScrollPosition(id, window.scrollY); } },
+    { key: 'T', handler: cycleTheme },
+    { key: 't', handler: cycleTheme },
+    { key: 'ArrowLeft', handler: goToPrevChapter },
+    { key: 'ArrowRight', handler: goToNextChapter },
+    { key: 'Escape', handler: () => {
+      if (showTocDrawer) { setShowTocDrawer(false); return; }
+      if (showHighlightsDrawer) { setShowHighlightsDrawer(false); return; }
+      if (isFocusMode) { setIsFocusMode(false); return; }
+      if (showControls) { setShowControls(false); }
+    }},
+  ]);
 
   useEffect(() => {
     if (token && id) {
@@ -240,9 +274,9 @@ export default function Reader() {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${themeClasses[theme]} font-sans`}>
+    <div className={`min-h-screen transition-colors duration-300 ${themeClasses[theme]} font-sans ${readerTexture !== 'none' ? `texture-${readerTexture}` : ''}`}>
       {/* Top Bar Overlay */}
-      <div className={`fixed top-0 inset-x-0 bg-[#FBF6EC]/95 dark:bg-[#0F0F0F]/95 backdrop-blur-md shadow-chip z-50 transition-transform duration-300 ${showControls ? 'translate-y-0' : '-translate-y-full'} border-b border-[#EFE6D8] dark:border-[#222222]`}>
+      <div className={`fixed top-0 inset-x-0 bg-[#FBF6EC]/95 dark:bg-[#0F0F0F]/95 backdrop-blur-md shadow-chip z-50 transition-transform duration-300 ${showControls && !isFocusMode ? 'translate-y-0' : '-translate-y-full'} border-b border-[#EFE6D8] dark:border-[#222222]`}>
         <div className="max-w-3xl mx-auto px-3 h-14 flex items-center gap-2">
           <button onClick={() => navigate(-1)} className="p-2 rounded-full text-[#3D2B1F] dark:text-[#ADADAD] hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
             <ChevronLeft className="w-6 h-6" />
@@ -268,6 +302,13 @@ export default function Reader() {
             title="Highlights & Notes"
           >
             <Bookmark className="w-5 h-5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setIsFocusMode(f => !f); }}
+            className={`p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors ${isFocusMode ? 'text-[#E8604F]' : 'text-[#3D2B1F] dark:text-[#ADADAD]'}`}
+            title="Focus Mode (F)"
+          >
+            <Maximize2 className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -438,6 +479,22 @@ export default function Reader() {
             >
               <Moon className="w-4 h-4" /> Night
             </button>
+          </div>
+
+          {/* Texture + Focus Mode */}
+          <div className="flex items-center gap-2 pt-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B5645] dark:text-[#888888] shrink-0">Texture</span>
+            <div className="flex gap-1.5 flex-1">
+              {(['none','paper','linen','aged'] as const).map(tx => (
+                <button
+                  key={tx}
+                  onClick={() => setReaderTexture(tx)}
+                  className={`flex-1 py-1.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer capitalize ${readerTexture === tx ? 'bg-[#E8604F] text-white border-[#E8604F]' : 'border-[#E4D9C8] dark:border-[#222222] text-[#6B5645] dark:text-[#888888]'}`}
+                >
+                  {tx === 'none' ? 'Tắt' : tx === 'paper' ? 'Giấy' : tx === 'linen' ? 'Vải' : 'Cũ'}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

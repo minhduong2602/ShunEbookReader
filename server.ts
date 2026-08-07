@@ -11,12 +11,23 @@ app.use(express.json({ limit: "50mb" }));
 
 app.post("/api/login", (req, res) => {
   const { id, password } = req.body || {};
-  if (
-    process.env.AUTH_ID && process.env.AUTH_PASSWORD &&
-    id === process.env.AUTH_ID && password === process.env.AUTH_PASSWORD
-  ) {
+  const authId = process.env.AUTH_ID;
+  const authPassword = process.env.AUTH_PASSWORD;
+
+  // Strict check if environment variables are explicitly configured
+  if (authId && authPassword) {
+    if (id === authId && password === authPassword) {
+      return res.json({ success: true, token: Buffer.from(`${id}:${password}`).toString('base64') });
+    }
+    return res.status(401).json({ error: "Invalid credentials" });
+  }
+
+  // Fallback when AUTH_ID/AUTH_PASSWORD are not set (e.g. Vercel deployment without .env):
+  // Allow login for any non-empty ID & password
+  if (id && password) {
     return res.json({ success: true, token: Buffer.from(`${id}:${password}`).toString('base64') });
   }
+
   return res.status(401).json({ error: "Invalid credentials" });
 });
 

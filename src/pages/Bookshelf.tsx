@@ -4,7 +4,8 @@ import {
   Book, LogOut, Loader2, Folder as FolderIcon, Download, Clock, Settings, 
   FileText, List, Upload, MessageSquare, CheckCircle2, Circle, ArrowUpDown, 
   LayoutGrid, Search, Home, ArrowUpRight, Menu, X as XIcon, ChevronRight, 
-  ChevronLeft, Sparkles, Heart, Library, Bookmark, ShoppingBag, Bot
+  ChevronLeft, Sparkles, Heart, Library, Bookmark, ShoppingBag, Bot,
+  AlignJustify, SlidersHorizontal
 } from 'lucide-react';
 import { useStore } from '../store';
 import { getFolders, DriveFile } from '../lib/drive';
@@ -13,12 +14,16 @@ import NotesTab from '../components/NotesTab';
 import BookCoverCard from '../components/BookCoverCard';
 import CategoryRail from '../components/CategoryRail';
 import DesktopChatPanel from '../components/DesktopChatPanel';
+import HomeSectionManager from '../components/HomeSectionManager';
+import FilterBar, { SortOption, ShelfFilter } from '../components/FilterBar';
 
 export default function Bookshelf() {
   const navigate = useNavigate();
   const { 
     token, folderId, logout, loadSyncFromDrive, readHistory, userName, 
-    completedBooks, toggleBookCompleted, triggerSyncToDrive, quickNotes 
+    completedBooks, toggleBookCompleted, triggerSyncToDrive, quickNotes,
+    bookshelfLayout, setBookshelfLayout, homeSections,
+    bookCollections, setBookCollection, bookMetadata,
   } = useStore();
 
   const [books, setBooks] = useState<DriveFile[]>([]);
@@ -29,9 +34,12 @@ export default function Bookshelf() {
   const [activeTab, setActiveTab] = useState<'home' | 'library' | 'notes'>(
     (localStorage.getItem('reader_active_tab') as any) || 'home'
   );
-  const [sortBy, setSortBy] = useState<'newest' | 'name'>(
+  const [sortBy, setSortBy] = useState<SortOption>(
     (localStorage.getItem('reader_sort_by') as any) || 'newest'
   );
+  const [shelfFilter, setShelfFilter] = useState<ShelfFilter>('all');
+  const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [showHomeSectionManager, setShowHomeSectionManager] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,17 +101,34 @@ export default function Bookshelf() {
     navigate('/', { replace: true });
   };
 
+  // Collect all tags across all books
+  const allTags = Array.from(new Set(
+    Object.values(bookMetadata).flatMap(m => m.tags)
+  )).sort();
+
   const sortedBooks = [...books]
     .filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter(b => {
+      if (shelfFilter === 'all') return true;
+      return bookCollections[b.id] === shelfFilter;
+    })
+    .filter(b => {
+      if (activeTags.length === 0) return true;
+      const tags = bookMetadata[b.id]?.tags || [];
+      return activeTags.every(t => tags.includes(t));
+    })
     .sort((a, b) => {
+      if (sortBy === 'rating') {
+        const rA = bookMetadata[a.id]?.rating || 0;
+        const rB = bookMetadata[b.id]?.rating || 0;
+        if (rA !== rB) return rB - rA;
+      }
       if (sortBy === 'newest') {
         const timeA = a.updatedAt || 0;
         const timeB = b.updatedAt || 0;
         if (timeA !== timeB) return timeB - timeA;
-        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-      } else {
-        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
       }
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
     });
 
   const handleToggleBookRead = (e: MouseEvent, bookId: string) => {
@@ -111,6 +136,16 @@ export default function Bookshelf() {
     toggleBookCompleted(bookId);
     triggerSyncToDrive().catch(console.error);
   };
+
+  const handleTagToggle = (tag: string) => {
+    setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  };
+
+  const handleClearFilters = () => {
+    setShelfFilter('all');
+    setActiveTags([]);
+  };
+
 
   return (
     <div className="min-h-screen bg-[#E7DDCE] text-[#3D2B1F] flex flex-col lg:flex-row overflow-x-hidden font-sans">
@@ -293,7 +328,18 @@ export default function Bookshelf() {
           {/* TAB 1: HOME */}
           {activeTab === 'home' && (
             <div className="space-y-8 animate-fade-in">
-              {/* Promo Banner Card (#F1E9DA surface-card-tint) */}
+              {/* Customize home button */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowHomeSectionManager(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#6B5645] border border-[#EFE6D8] rounded-full text-[11px] font-bold shadow-chip hover:border-[#E8604F]/30 transition-colors cursor-pointer"
+                >
+                  <SlidersHorizontal className="w-3 h-3" /> Tuỳ chỉnh trang chủ
+                </button>
+              </div>
+
+              {/* Promo Banner Card */}
+              {homeSections.find(s => s.key === 'promo')?.visible && (
               <div className="bg-[#F1E9DA] rounded-[20px] p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs border border-[#EFE6D8]">
                 <div className="space-y-2 text-center md:text-left">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#E8604F] bg-white/80 px-3 py-1 rounded-full shadow-xs">
@@ -323,8 +369,10 @@ export default function Bookshelf() {
                   </button>
                 </div>
               </div>
+              )}
 
-              {/* Section 1: Read History Carousel ("Popular / Đọc gần đây") */}
+              {/* Section 1: Read History Carousel */}
+              {homeSections.find(s => s.key === 'recent')?.visible && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="font-display font-bold text-xl sm:text-2xl text-[#3D2B1F]">
@@ -363,8 +411,10 @@ export default function Bookshelf() {
                   </div>
                 )}
               </div>
+              )}
 
-              {/* Section 2: Personal Library Grid ("Popular / Tất cả sách") */}
+              {/* Section 2: Personal Library Grid */}
+              {homeSections.find(s => s.key === 'new')?.visible && (
               <div className="space-y-4 pt-4">
                 <div className="flex items-center justify-between">
                   <h2 className="font-display font-bold text-xl sm:text-2xl text-[#3D2B1F]">
@@ -415,37 +465,97 @@ export default function Bookshelf() {
                   </div>
                 )}
               </div>
+              )}
             </div>
           )}
 
           {/* TAB 2: LIBRARY */}
           {activeTab === 'library' && (
-            <div className="space-y-6 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display font-bold text-2xl text-[#3D2B1F]">Tất cả bộ truyện ({sortedBooks.length})</h2>
-                
-                <button
-                  onClick={() => setSortBy(sortBy === 'newest' ? 'name' : 'newest')}
-                  className="px-4 py-2 bg-white text-[#3D2B1F] text-xs font-bold rounded-full shadow-chip flex items-center gap-1.5"
-                >
-                  <ArrowUpDown className="w-3.5 h-3.5" />
-                  {sortBy === 'newest' ? 'Mới nhất' : 'Tên A-Z'}
-                </button>
+            <div className="space-y-5 animate-fade-in">
+              {/* Header row */}
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="font-display font-bold text-2xl text-[#3D2B1F]">Thư viện ({sortedBooks.length})</h2>
+
+                {/* Layout toggle */}
+                <div className="flex items-center gap-2">
+                  {([
+                    { v: 'grid', icon: LayoutGrid },
+                    { v: 'list', icon: List },
+                    { v: 'compact', icon: AlignJustify },
+                  ] as const).map(({ v, icon: Icon }) => (
+                    <button
+                      key={v}
+                      onClick={() => setBookshelfLayout(v)}
+                      className={`p-2 rounded-xl transition-all cursor-pointer ${bookshelfLayout === v ? 'bg-[#E8604F]/10 text-[#E8604F]' : 'text-[#6B5645] hover:bg-[#F0E7D8]'}`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* FilterBar */}
+              <FilterBar
+                sort={sortBy}
+                onSortChange={setSortBy}
+                shelfFilter={shelfFilter}
+                onShelfChange={setShelfFilter}
+                activeTags={activeTags}
+                allTags={allTags}
+                onTagToggle={handleTagToggle}
+                onClearFilters={handleClearFilters}
+              />
 
               {sortedBooks.length === 0 ? (
                 <div className="bg-white p-12 rounded-2xl text-center border border-[#EFE6D8] space-y-3 shadow-chip">
                   <FolderIcon className="w-12 h-12 mx-auto text-[#E8604F] opacity-40" />
-                  <p className="font-bold text-lg text-[#3D2B1F]">Chưa có truyện nào trong thư viện</p>
-                  <button
-                    onClick={() => setIsUploadOpen(true)}
-                    className="px-6 py-3 bg-[#E8604F] text-white font-bold text-xs rounded-full shadow-chip cursor-pointer"
-                  >
-                    Tải lên truyện đầu tiên
-                  </button>
+                  <p className="font-bold text-lg text-[#3D2B1F]">
+                    {shelfFilter !== 'all' || activeTags.length > 0 ? 'Không có sách phù hợp bộ lọc' : 'Chưa có truyện nào trong thư viện'}
+                  </p>
+                  {shelfFilter !== 'all' || activeTags.length > 0 ? (
+                    <button onClick={handleClearFilters} className="text-xs font-bold text-[#E8604F] underline cursor-pointer">Xóa bộ lọc</button>
+                  ) : (
+                    <button
+                      onClick={() => setIsUploadOpen(true)}
+                      className="px-6 py-3 bg-[#E8604F] text-white font-bold text-xs rounded-full shadow-chip cursor-pointer"
+                    >
+                      Tải lên truyện đầu tiên
+                    </button>
+                  )}
+                </div>
+              ) : bookshelfLayout === 'list' ? (
+                <div className="space-y-2">
+                  {sortedBooks.map((book) => (
+                    <div
+                      key={book.id}
+                      onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
+                      className="flex items-center gap-4 bg-white p-3 rounded-2xl border border-[#EFE6D8] shadow-chip hover:shadow-md hover:border-[#E8604F]/20 transition-all cursor-pointer group"
+                    >
+                      <div className="w-10 h-14 rounded-xl bg-gradient-to-br from-[#E8604F] to-[#EDB65B] shrink-0 flex items-center justify-center text-white text-xs font-bold">
+                        {book.name.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-[#3D2B1F] group-hover:text-[#E8604F] transition-colors truncate">{book.name}</p>
+                        <p className="text-xs text-[#6B5645]">{book.updatedAt ? new Date(book.updatedAt).toLocaleDateString('vi-VN') : 'Sách sưu tầm'}</p>
+                        {bookCollections[book.id] && <span className="text-[10px] font-bold text-[#8D7FC4]">{bookCollections[book.id]}</span>}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {bookMetadata[book.id]?.rating > 0 && (
+                          <span className="text-[10px] font-bold text-[#EDB65B]">{'★'.repeat(bookMetadata[book.id].rating)}</span>
+                        )}
+                        <button onClick={(e) => handleToggleBookRead(e, book.id)} className="p-1">
+                          {completedBooks[book.id]
+                            ? <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            : <Circle className="w-4 h-4 text-[#ADADAD]" />}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                <div className={`grid gap-4 sm:gap-6 ${bookshelfLayout === 'compact'
+                  ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6'
+                  : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'}`}>
                   {sortedBooks.map((book) => (
                     <BookCoverCard
                       key={book.id}
@@ -453,6 +563,9 @@ export default function Bookshelf() {
                       title={book.name}
                       author={book.updatedAt ? new Date(book.updatedAt).toLocaleDateString('vi-VN') : 'Sách sưu tầm'}
                       isCompleted={completedBooks[book.id]}
+                      shelf={bookCollections[book.id] || null}
+                      rating={bookMetadata[book.id]?.rating || 0}
+                      size={bookshelfLayout === 'compact' ? 'sm' : 'md'}
                       onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
                       onToggleCompleted={(e) => handleToggleBookRead(e, book.id)}
                     />
@@ -461,6 +574,7 @@ export default function Bookshelf() {
               )}
             </div>
           )}
+
 
           {/* TAB 3: NOTES */}
           {activeTab === 'notes' && (
@@ -541,6 +655,12 @@ export default function Bookshelf() {
           loadBooks();
         }}
       />
+
+      {/* Home Section Manager Modal */}
+      {showHomeSectionManager && (
+        <HomeSectionManager onClose={() => setShowHomeSectionManager(false)} />
+      )}
     </div>
+
   );
 }
