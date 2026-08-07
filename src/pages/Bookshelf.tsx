@@ -4,7 +4,7 @@ import {
   Book, LogOut, Loader2, Folder as FolderIcon, Download, Clock, Settings, 
   FileText, List, Upload, MessageSquare, CheckCircle2, Circle, ArrowUpDown, 
   LayoutGrid, Search, Home, ArrowUpRight, Menu, X as XIcon, ChevronRight, 
-  ChevronLeft, Sparkles, Heart, Library, Bookmark, ShoppingBag, Bot,
+  ChevronLeft, Sparkles, Heart, Library, Bookmark, ShoppingBag, StickyNote,
   AlignJustify, SlidersHorizontal
 } from 'lucide-react';
 import { useStore } from '../store';
@@ -315,13 +315,13 @@ export default function Bookshelf() {
                 <ShoppingBag className="w-5 h-5" />
               </button>
 
-              {/* Mobile Chat Drawer Toggle */}
+              {/* Mobile Notes Drawer Toggle */}
               <button
                 onClick={() => setIsChatOpenMobile(true)}
                 className="lg:hidden w-11 h-11 rounded-full bg-[#8D7FC4] text-white flex items-center justify-center shadow-chip shrink-0 cursor-pointer"
-                title="Mở Trợ lý"
+                title="Mở Ghi chú"
               >
-                <Bot className="w-5 h-5" />
+                <StickyNote className="w-5 h-5" />
               </button>
             </div>
           </div>
