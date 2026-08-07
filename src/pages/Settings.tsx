@@ -85,7 +85,7 @@ export default function Settings() {
               {[
                 { id: 'light', label: 'Cozy Paper', bg: 'bg-[#FBF6EC] text-[#3D2B1F] border-[#E4D9C8]' },
                 { id: 'sepia', label: 'Sepia', bg: 'bg-[#F4ECD8] text-[#5B4636] border-[#E0CDA9]' },
-                { id: 'dark', label: 'Night', bg: 'bg-[#2B2119] text-[#F5EFE3] border-[#3D2B1F]' }
+                { id: 'dark', label: 'Night', bg: 'bg-[#0F0F0F] text-[#ADADAD] border-[#222222]' }
               ].map(t => (
                 <button
                   key={t.id}

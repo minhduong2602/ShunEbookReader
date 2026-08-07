@@ -79,7 +79,11 @@ export const DesktopChatPanel: React.FC<DesktopChatPanelProps> = ({
   const handleAddNote = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNote.trim()) return;
-    addQuickNote(newNote.trim());
+    addQuickNote({
+      id: crypto.randomUUID(),
+      text: newNote.trim(),
+      timestamp: Date.now()
+    });
     setNewNote('');
   };
 
@@ -230,7 +234,7 @@ export const DesktopChatPanel: React.FC<DesktopChatPanelProps> = ({
               quickNotes.map((note, idx) => (
                 <div key={idx} className="p-3.5 rounded-2xl bg-white border border-[#EFE6D8] shadow-chip space-y-1">
                   <p className="text-xs font-semibold text-[#3D2B1F] leading-relaxed">{note.text}</p>
-                  <p className="text-[10px] text-[#6B5645]">{new Date(note.createdAt).toLocaleDateString('vi-VN')}</p>
+                  <p className="text-[10px] text-[#6B5645]">{new Date(note.timestamp).toLocaleDateString('vi-VN')}</p>
                 </div>
               ))
             )}
