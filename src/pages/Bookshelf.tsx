@@ -92,7 +92,18 @@ export default function Bookshelf() {
   )).sort();
 
   const sortedBooks = [...books]
-    .filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter(b => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      const meta = bookMetadata[b.id];
+      const titleMatch = b.name.toLowerCase().includes(q) || (meta?.customName && meta.customName.toLowerCase().includes(q));
+      const authorMatch = meta?.author && meta.author.toLowerCase().includes(q);
+      const descMatch = meta?.description && meta.description.toLowerCase().includes(q);
+      const reviewMatch = meta?.review && meta.review.toLowerCase().includes(q);
+      const tagMatch = meta?.tags && meta.tags.some(t => t.toLowerCase().includes(q));
+
+      return Boolean(titleMatch || authorMatch || descMatch || reviewMatch || tagMatch);
+    })
     .filter(b => {
       if (shelfFilter === 'all') return true;
       return bookCollections[b.id] === shelfFilter;
@@ -370,17 +381,23 @@ export default function Bookshelf() {
                   </div>
                 ) : (
                   <div className="flex items-start gap-4 overflow-x-auto no-scrollbar py-2 px-1">
-                    {readHistory.map((history) => (
-                      <BookCoverCard
-                        key={history.bookId}
-                        id={history.bookId}
-                        title={history.bookName}
-                        author={history.lastChapterName || 'Đang đọc'}
-                        isCompleted={completedBooks[history.bookId]}
-                        onClick={() => navigate(`/book/${history.bookId}`, { state: { bookName: history.bookName } })}
-                        onToggleCompleted={(e) => handleToggleBookRead(e, history.bookId)}
-                      />
-                    ))}
+                    {readHistory.map((history) => {
+                      const meta = bookMetadata[history.bookId];
+                      return (
+                        <BookCoverCard
+                          key={history.bookId}
+                          id={history.bookId}
+                          title={meta?.customName || history.bookName}
+                          author={meta?.author || history.lastChapterName || 'Đang đọc'}
+                          coverImage={meta?.coverImage}
+                          isCompleted={completedBooks[history.bookId]}
+                          shelf={bookCollections[history.bookId] || null}
+                          rating={meta?.rating || 0}
+                          onClick={() => navigate(`/book/${history.bookId}`, { state: { bookName: history.bookName } })}
+                          onToggleCompleted={(e) => handleToggleBookRead(e, history.bookId)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -434,6 +451,8 @@ export default function Bookshelf() {
                           author={meta?.author || (book.updatedAt ? new Date(book.updatedAt).toLocaleDateString('vi-VN') : 'Sách sưu tầm')}
                           coverImage={meta?.coverImage}
                           isCompleted={completedBooks[book.id]}
+                          shelf={bookCollections[book.id] || null}
+                          rating={meta?.rating || 0}
                           onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
                           onToggleCompleted={(e) => handleToggleBookRead(e, book.id)}
                         />
