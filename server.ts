@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const app = express();
 const PORT = 3000;
@@ -58,8 +59,8 @@ app.get("/api/status", async (req, res) => {
 });
 
 // Lazy S3 client initialization
-let s3Client: S3Client | null = null;
-function getS3Client() {
+let s3Client: any = null;
+function getS3Client(): any {
   if (!s3Client) {
     if (!isR2Configured()) {
       throw new Error("R2 is not fully configured");
@@ -175,6 +176,7 @@ app.get("/api/books", async (req, res) => {
         const books = Array.from(booksMap.values());
         const allItems = [...books, ...rootFiles];
         allItems.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=300");
         return res.json(allItems);
       } catch (r2Err: any) {
         console.error("R2 failed to list books:", r2Err);
@@ -280,6 +282,7 @@ app.get("/api/books/:bookId/chapters", async (req, res) => {
               updatedAt: file.LastModified ? new Date(file.LastModified).getTime() : Date.now(),
             };
           });
+        res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=300");
         return res.json(files);
       } catch (r2Err: any) {
         console.error(`R2 failed to list chapters for ${bookName}:`, r2Err);
@@ -327,25 +330,25 @@ app.get("/api/chapters/:id/content", async (req, res) => {
     if (isR2Configured()) {
       try {
         const s3 = getS3Client();
+        let contentType = "text/plain";
+        if (key.endsWith(".docx")) {
+          contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        } else if (key.endsWith(".html") || key.endsWith(".htm")) {
+          contentType = "text/html";
+        }
+
         const command = new GetObjectCommand({
           Bucket: BUCKET,
           Key: key,
+          ResponseContentType: contentType,
         });
-        const data = await s3.send(command);
-        if (data.Body) {
-          const bytes = await data.Body.transformToByteArray();
-          const buffer = Buffer.from(bytes);
-          
-          let contentType = "text/plain";
-          if (key.endsWith(".docx")) {
-            contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-          } else if (key.endsWith(".html") || key.endsWith(".htm")) {
-            contentType = "text/html";
-          }
-          
-          res.setHeader("Content-Type", contentType);
-          return res.send(buffer);
-        }
+        
+        // Generate a presigned URL valid for 1 hour
+        const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
+        
+        // Redirect client to fetch directly from Cloudflare R2
+        res.setHeader("Cache-Control", "s-maxage=1800");
+        return res.redirect(302, presignedUrl);
       } catch (r2Err: any) {
         console.error(`R2 failed to load content for ${key}:`, r2Err);
         return res.status(500).json({ error: `Cloudflare R2 Error: ${r2Err.message}` });

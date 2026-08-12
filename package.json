@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1075.0",
+    "@aws-sdk/client-s3": "^3.1108.0",
+    "@aws-sdk/s3-request-presigner": "^3.1108.0",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
@@ -40,6 +41,7 @@
     "@types/mark.js": "^8.11.12",
     "@types/multer": "^2.1.0",
     "@types/node": "^22.14.0",
+    "@types/serve-static": "^2.2.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.28.1",
     "tailwindcss": "^4.1.14",
