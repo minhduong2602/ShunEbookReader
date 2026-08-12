@@ -36,7 +36,7 @@ function AutoSync() {
       lastStateRef.current = currentState;
       const timeoutId = setTimeout(() => {
         triggerSyncToDrive();
-      }, 5000); // 5 second debounce for auto sync
+      }, 30000); // 30 second debounce for auto sync
       
       return () => clearTimeout(timeoutId);
     }

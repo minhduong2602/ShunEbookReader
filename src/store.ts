@@ -239,6 +239,7 @@ export const useStore = create<AppState>((set, get) => ({
         history.unshift({ ...entry, lastAccessed: Date.now() } as ReadHistoryEntry);
       }
       history.sort((a, b) => b.lastAccessed - a.lastAccessed);
+      if (history.length > 100) history = history.slice(0, 100);
       localStorage.setItem('reader_history', JSON.stringify(history));
       return { readHistory: history };
     });
@@ -249,6 +250,11 @@ export const useStore = create<AppState>((set, get) => ({
   setScrollPosition: (chapterId, position) => {
     set((state) => {
       const newPositions = { ...state.scrollPositions, [chapterId]: position };
+      const keys = Object.keys(newPositions);
+      if (keys.length > 50) {
+        const keysToRemove = keys.slice(0, keys.length - 50);
+        keysToRemove.forEach(k => delete newPositions[k]);
+      }
       localStorage.setItem('reader_scroll_positions', JSON.stringify(newPositions));
       return { scrollPositions: newPositions };
     });
@@ -542,7 +548,8 @@ export const useStore = create<AppState>((set, get) => ({
   },
   addChatMessage: (msg) => {
     set((state) => {
-      const newMessages = [...state.chatMessages, msg];
+      let newMessages = [...state.chatMessages, msg];
+      if (newMessages.length > 50) newMessages = newMessages.slice(newMessages.length - 50);
       localStorage.setItem('reader_chat_messages', JSON.stringify(newMessages));
       return { chatMessages: newMessages };
     });
