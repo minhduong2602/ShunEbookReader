@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
-import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const app = express();
@@ -176,7 +176,7 @@ app.get("/api/books", async (req, res) => {
         const books = Array.from(booksMap.values());
         const allItems = [...books, ...rootFiles];
         allItems.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-        res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=300");
+        res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=3600");
         return res.json(allItems);
       } catch (r2Err: any) {
         console.error("R2 failed to list books:", r2Err);
@@ -282,7 +282,7 @@ app.get("/api/books/:bookId/chapters", async (req, res) => {
               updatedAt: file.LastModified ? new Date(file.LastModified).getTime() : Date.now(),
             };
           });
-        res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=300");
+        res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=3600");
         return res.json(files);
       } catch (r2Err: any) {
         console.error(`R2 failed to list chapters for ${bookName}:`, r2Err);
@@ -426,9 +426,49 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// 5. API: Get Sync State
+// 5. API: Get Sync State Version
+app.get("/api/sync/version", async (req, res) => {
+  const syncKey = "reader_sync_v1.json";
+  try {
+    if (isR2Configured()) {
+      try {
+        const s3 = getS3Client();
+        const command = new HeadObjectCommand({
+          Bucket: BUCKET,
+          Key: syncKey,
+        });
+        const data = await s3.send(command);
+        const version = data.LastModified ? new Date(data.LastModified).getTime() : 0;
+        res.setHeader("Cache-Control", "public, s-maxage=10, stale-while-revalidate=60");
+        return res.json({ version });
+      } catch (e: any) {
+        return res.json({ version: 0 });
+      }
+    }
+    
+    // Local fallback
+    const syncPath = path.join(LOCAL_DATA_DIR, syncKey);
+    if (fs.existsSync(syncPath)) {
+      const fStat = fs.statSync(syncPath);
+      return res.json({ version: fStat.mtimeMs });
+    }
+    return res.json({ version: 0 });
+  } catch (err: any) {
+    return res.json({ version: 0 });
+  }
+});
+
+// 5.1 API: Get Sync State
 app.get("/api/sync", async (req, res) => {
   const syncKey = "reader_sync_v1.json";
+  
+  // Set cache headers if version is provided
+  if (req.query.v) {
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  } else {
+    res.setHeader("Cache-Control", "no-cache");
+  }
+
   try {
     if (isR2Configured()) {
       try {

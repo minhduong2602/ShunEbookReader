@@ -7,9 +7,22 @@ export interface DriveFile {
   updatedAt?: number;
 }
 
-export async function getSyncState(token: string | null): Promise<any | null> {
+export async function getSyncVersion(token: string | null): Promise<number> {
   try {
-    const res = await fetch('/api/sync');
+    const res = await fetch('/api/sync/version');
+    if (!res.ok) return 0;
+    const data = await res.json();
+    return data.version || 0;
+  } catch (err) {
+    console.error('Failed to get sync version', err);
+    return 0;
+  }
+}
+
+export async function getSyncState(token: string | null, version?: number): Promise<any | null> {
+  try {
+    const url = version ? `/api/sync?v=${version}` : '/api/sync';
+    const res = await fetch(url);
     if (!res.ok) return null;
     return await res.json();
   } catch (err) {

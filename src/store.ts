@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { DriveFile, getSyncState, saveSyncState } from './lib/drive';
+import { DriveFile, getSyncState, getSyncVersion, saveSyncState } from './lib/drive';
 
 export interface Highlight {
   id: string;
@@ -98,6 +98,7 @@ interface AppState {
   isSessionExpired: boolean;
   isSyncing: boolean;
   lastSyncedAt: number;
+  lastSyncVersion: number;
 
   // Phase 4: Customization
   customThemes: CustomTheme[];
@@ -181,6 +182,7 @@ export const useStore = create<AppState>((set, get) => ({
   isSessionExpired: false,
   isSyncing: false,
   lastSyncedAt: 0,
+  lastSyncVersion: Number(localStorage.getItem('reader_last_sync_version')) || 0,
 
   // Phase 4 initial state
   customThemes: JSON.parse(localStorage.getItem('reader_custom_themes') || '[]'),
@@ -347,7 +349,16 @@ export const useStore = create<AppState>((set, get) => ({
     
     set({ isSyncing: true });
     try {
-      const state = await getSyncState(token);
+      const serverVersion = await getSyncVersion(token);
+      const currentVersion = get().lastSyncVersion;
+      
+      // If version hasn't changed and we have a valid version, skip downloading JSON
+      if (serverVersion > 0 && currentVersion > 0 && serverVersion === currentVersion) {
+        set({ isSyncing: false });
+        return;
+      }
+      
+      const state = await getSyncState(token, serverVersion > 0 ? serverVersion : undefined);
       if (state) {
         const mergedScrolls = { ...get().scrollPositions, ...(state.scrollPositions || {}) };
         const mergedHighlights = { ...get().highlights, ...(state.highlights || {}) };
@@ -398,8 +409,12 @@ export const useStore = create<AppState>((set, get) => ({
           ...(state.lineHeight ? { lineHeight: Number(state.lineHeight) } : {}),
           ...(state.textIndent !== undefined ? { textIndent: Boolean(state.textIndent) } : {}),
           ...(state.chatMessages ? { chatMessages: state.chatMessages } : {}),
-          lastSyncedAt: Date.now()
+          lastSyncedAt: Date.now(),
+          lastSyncVersion: serverVersion > 0 ? serverVersion : currentVersion
         });
+        if (serverVersion > 0) {
+          localStorage.setItem('reader_last_sync_version', serverVersion.toString());
+        }
       }
     } finally {
       set({ isSyncing: false });
@@ -434,6 +449,13 @@ export const useStore = create<AppState>((set, get) => ({
         timestamp: Date.now()
       });
       set({ lastSyncedAt: Date.now() });
+      
+      // Update local version so we don't immediately re-download what we just saved
+      const newVersion = await getSyncVersion(token);
+      if (newVersion > 0) {
+        localStorage.setItem('reader_last_sync_version', newVersion.toString());
+        set({ lastSyncVersion: newVersion });
+      }
     } catch (err) {
       console.error('Auto sync failed', err);
     }
