@@ -549,6 +549,90 @@ app.post("/api/sync", async (req, res) => {
   }
 });
 
+// 6.1 API: Patch Sync State
+app.patch("/api/sync", async (req, res) => {
+  const syncKey = "reader_sync_v1.json";
+  try {
+    const patch = req.body || {};
+    let currentState: any = {};
+    
+    // 1. Fetch current state
+    if (isR2Configured()) {
+      try {
+        const s3 = getS3Client();
+        const getCmd = new GetObjectCommand({ Bucket: BUCKET, Key: syncKey });
+        const data = await s3.send(getCmd);
+        if (data.Body) {
+          const text = await data.Body.transformToString();
+          currentState = JSON.parse(text);
+        }
+      } catch (e: any) {
+        const isNotFound = e.name === "NoSuchKey" || e.$metadata?.httpStatusCode === 404;
+        if (!isNotFound) console.warn("R2 failed to load for patch:", e.message);
+      }
+    } else {
+      const syncPath = path.join(LOCAL_DATA_DIR, syncKey);
+      if (fs.existsSync(syncPath)) {
+        currentState = JSON.parse(fs.readFileSync(syncPath, "utf-8"));
+      }
+    }
+
+    // 2. Shallow merge at the top-level keys
+    const newState = { ...currentState };
+    for (const key of Object.keys(patch)) {
+      if (typeof patch[key] === 'object' && patch[key] !== null && !Array.isArray(patch[key])) {
+        newState[key] = { ...(newState[key] || {}), ...patch[key] };
+      } else {
+        newState[key] = patch[key];
+      }
+    }
+    newState.timestamp = Date.now();
+
+    // 3. Save merged state
+    let savedToR2 = false;
+    if (isR2Configured()) {
+      try {
+        const s3 = getS3Client();
+        const putCmd = new PutObjectCommand({
+          Bucket: BUCKET,
+          Key: syncKey,
+          Body: JSON.stringify(newState),
+          ContentType: "application/json",
+        });
+        await s3.send(putCmd);
+        savedToR2 = true;
+      } catch (e: any) {
+        console.warn("R2 failed to save patched state:", e.message);
+      }
+    }
+    
+    try {
+      const syncPath = path.join(LOCAL_DATA_DIR, syncKey);
+      fs.writeFileSync(syncPath, JSON.stringify(newState), "utf-8");
+    } catch (e) {}
+
+    // 4. Get new version to return to client
+    let newVersion = 0;
+    if (isR2Configured() && savedToR2) {
+      try {
+        const headCmd = new HeadObjectCommand({ Bucket: BUCKET, Key: syncKey });
+        const headData = await getS3Client().send(headCmd);
+        if (headData.LastModified) newVersion = new Date(headData.LastModified).getTime();
+      } catch (e) {}
+    } else {
+      try {
+        const syncPath = path.join(LOCAL_DATA_DIR, syncKey);
+        if (fs.existsSync(syncPath)) newVersion = fs.statSync(syncPath).mtimeMs;
+      } catch (e) {}
+    }
+
+    return res.json({ success: true, savedToR2, version: newVersion });
+  } catch (err: any) {
+    console.error("Failed to patch sync state", err);
+    return res.status(500).json({ error: err.message || "Failed to patch sync state" });
+  }
+});
+
 // 7. API: Link Preview
 app.get("/api/link-preview", async (req, res) => {
   try {

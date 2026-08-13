@@ -18,29 +18,50 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AutoSync() {
-  const { token, scrollPositions, highlights, fontSize, theme, fontFamily, triggerSyncToDrive } = useStore();
+  const state = useStore();
   const lastStateRef = useRef<any>(null);
+  const pendingPatchRef = useRef<any>({});
+  const timeoutRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!token) return;
+    if (!state.token) return;
     
-    const currentState = { scrollPositions, highlights, fontSize, theme, fontFamily };
+    const watchFields = [
+      'scrollPositions', 'highlights', 'quickNotes', 'completedBooks',
+      'completedChapters', 'fontSize', 'theme', 'fontFamily', 'userName',
+      'readHistory', 'customThemes', 'readerTexture', 'bookshelfLayout',
+      'homeSections', 'bookCollections', 'bookMetadata', 'readingStats',
+      'lineHeight', 'textIndent'
+    ];
+
+    const currentState: any = {};
+    watchFields.forEach(f => currentState[f] = (state as any)[f]);
+
     if (!lastStateRef.current) {
       lastStateRef.current = currentState;
       return; 
     }
 
-    const isChanged = JSON.stringify(currentState) !== JSON.stringify(lastStateRef.current);
+    let hasChanges = false;
+    watchFields.forEach(f => {
+      if (JSON.stringify(currentState[f]) !== JSON.stringify(lastStateRef.current[f])) {
+        pendingPatchRef.current[f] = currentState[f];
+        lastStateRef.current[f] = currentState[f];
+        hasChanges = true;
+      }
+    });
     
-    if (isChanged) {
-      lastStateRef.current = currentState;
-      const timeoutId = setTimeout(() => {
-        triggerSyncToDrive();
-      }, 30000); // 30 second debounce for auto sync
-      
-      return () => clearTimeout(timeoutId);
+    if (hasChanges) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        const patch = { ...pendingPatchRef.current };
+        pendingPatchRef.current = {};
+        if (Object.keys(patch).length > 0) {
+          state.patchSyncToDrive(patch);
+        }
+      }, 5000); // 5 second debounce for auto sync patch
     }
-  }, [token, scrollPositions, highlights, fontSize, theme, fontFamily, triggerSyncToDrive]);
+  }, [state]);
 
   return null;
 }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { DriveFile, getSyncState, getSyncVersion, saveSyncState } from './lib/drive';
+import { DriveFile, getSyncState, getSyncVersion, saveSyncState, patchSyncState } from './lib/drive';
 
 export interface Highlight {
   id: string;
@@ -143,6 +143,7 @@ interface AppState {
   setSessionExpired: (expired: boolean) => void;
   loadSyncFromDrive: () => Promise<void>;
   triggerSyncToDrive: () => Promise<void>;
+  patchSyncToDrive: (patch: Partial<AppState>) => Promise<void>;
   logout: () => void;
 
   // Phase 4 actions
@@ -445,7 +446,6 @@ export const useStore = create<AppState>((set, get) => ({
         readingStats: currentState.readingStats,
         lineHeight: currentState.lineHeight,
         textIndent: currentState.textIndent,
-        chatMessages: currentState.chatMessages,
         timestamp: Date.now()
       });
       set({ lastSyncedAt: Date.now() });
@@ -458,6 +458,19 @@ export const useStore = create<AppState>((set, get) => ({
       }
     } catch (err) {
       console.error('Auto sync failed', err);
+    }
+  },
+  patchSyncToDrive: async (patch: Partial<AppState>) => {
+    const { token } = get();
+    if (!token) return;
+    try {
+      const res = await patchSyncState(token, patch);
+      if (res && res.version > 0) {
+        localStorage.setItem('reader_last_sync_version', res.version.toString());
+        set({ lastSyncVersion: res.version, lastSyncedAt: Date.now() });
+      }
+    } catch (err) {
+      console.error('Patch sync failed', err);
     }
   },
   logout: () => {
@@ -516,7 +529,6 @@ export const useStore = create<AppState>((set, get) => ({
       localStorage.setItem('reader_book_collections', JSON.stringify(newCollections));
       return { bookCollections: newCollections };
     });
-    get().triggerSyncToDrive().catch(console.error);
   },
   setBookMetadata: (bookId, updates) => {
     set((state) => {
@@ -533,7 +545,6 @@ export const useStore = create<AppState>((set, get) => ({
       localStorage.setItem('reader_book_metadata', JSON.stringify(newMeta));
       return { bookMetadata: newMeta };
     });
-    get().triggerSyncToDrive().catch(console.error);
   },
 
   // ─── Phase 1 Actions ────────────────────────────────────────────────────
@@ -657,7 +668,6 @@ export const useStore = create<AppState>((set, get) => ({
         ...(data.userName ? { userName: data.userName } : {}),
       });
 
-      get().triggerSyncToDrive().catch(console.error);
       return true;
     } catch (e) {
       console.error('Import failed', e);

@@ -109,17 +109,17 @@ export default function Book() {
   const handleToggleChapter = (e: MouseEvent, chapterId: string) => {
     e.stopPropagation();
     toggleChapterCompleted(chapterId);
-    triggerSyncToDrive().catch(console.error);
+    // AutoSync will handle this
   };
 
   const handleToggleBook = () => {
     toggleBookCompleted(bookId);
-    triggerSyncToDrive().catch(console.error);
+    // AutoSync will handle this
   };
 
   const handleMarkAll = (completed: boolean) => {
     markAllChaptersCompleted(bookId, chapters.map(c => c.id), completed);
-    triggerSyncToDrive().catch(console.error);
+    // AutoSync will handle this
   };
 
   return (
@@ -324,7 +324,7 @@ export default function Book() {
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => {
-                  triggerSyncToDrive().catch(console.error);
+                  // AutoSync will handle this
                   setIsEditingInfo(false);
                 }}
                 className="px-6 py-2.5 bg-[#E8604F] text-white text-xs font-bold rounded-full shadow-chip hover:bg-[#D6503F] active:scale-95 transition-all cursor-pointer flex items-center gap-2"

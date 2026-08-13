@@ -110,7 +110,7 @@ export default function Reader() {
     if (token && id) {
       loadContent();
       setChapterCompleted(id, true);
-      triggerSyncToDrive().catch(console.error);
+      // AutoSync will handle this
       if (bookId && bookName) {
         updateReadHistory({
           bookId,

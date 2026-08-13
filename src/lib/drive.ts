@@ -48,6 +48,25 @@ export async function saveSyncState(token: string | null, state: any): Promise<v
   }
 }
 
+export async function patchSyncState(token: string | null, patch: any): Promise<{version: number} | null> {
+  try {
+    const res = await fetch('/api/sync', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) {
+      throw new Error('Failed to patch sync state');
+    }
+    return await res.json();
+  } catch (err) {
+    console.error('Failed to patch sync state', err);
+    return null;
+  }
+}
+
 export async function getFolders(token: string | null, parentId: string | null): Promise<DriveFile[]> {
   try {
     const res = await fetch('/api/books');

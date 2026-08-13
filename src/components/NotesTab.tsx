@@ -90,7 +90,7 @@ export default function NotesTab() {
       timestamp: Date.now()
     });
     setText('');
-    triggerSyncToDrive();
+    // AutoSync will handle this
   };
 
   const handleEdit = (id: string, currentText: string) => {
@@ -101,24 +101,24 @@ export default function NotesTab() {
   const saveEdit = () => {
     if (editingId && editContent.trim()) {
       updateQuickNote(editingId, { text: editContent.trim() });
-      triggerSyncToDrive();
+      // AutoSync will handle this
     }
     setEditingId(null);
   };
 
   const handleDelete = (id: string) => {
     removeQuickNote(id);
-    triggerSyncToDrive();
+    // AutoSync will handle this
   };
   
   const togglePin = (id: string, currentPinned?: boolean) => {
     updateQuickNote(id, { pinned: !currentPinned });
-    triggerSyncToDrive();
+    // AutoSync will handle this
   };
 
   const changeColor = (id: string, color?: string) => {
     updateQuickNote(id, { color });
-    triggerSyncToDrive();
+    // AutoSync will handle this
   };
 
   const formatTime = (ts: number) => {

@@ -152,7 +152,7 @@ export default function Bookshelf() {
   const handleToggleBookRead = (e: MouseEvent, bookId: string) => {
     e.stopPropagation();
     toggleBookCompleted(bookId);
-    triggerSyncToDrive().catch(console.error);
+    // AutoSync will handle this
   };
 
   const handleTagToggle = (tag: string) => {

@@ -23,12 +23,12 @@ export const DesktopChatPanel: React.FC<DesktopChatPanelProps> = ({
       timestamp: Date.now()
     });
     setNewNote('');
-    triggerSyncToDrive().catch(console.error);
+    // AutoSync will handle this
   };
 
   const handleRemove = (noteId: string) => {
     removeQuickNote(noteId);
-    triggerSyncToDrive().catch(console.error);
+    // AutoSync will handle this
   };
 
   return (
