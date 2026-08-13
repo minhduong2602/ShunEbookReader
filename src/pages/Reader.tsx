@@ -125,6 +125,13 @@ export default function Reader() {
     return () => {
       if (id && !loading && !error) {
         setScrollPosition(id, window.scrollY);
+        const latestState = useStore.getState();
+        latestState.patchSyncToDrive({
+          scrollPositions: latestState.scrollPositions,
+          readHistory: latestState.readHistory,
+          readingStats: latestState.readingStats,
+          completedChapters: latestState.completedChapters
+        }).catch(console.error);
       }
     };
   }, [token, id]);

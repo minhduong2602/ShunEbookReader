@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
-import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const app = express();
@@ -426,33 +426,157 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// 5. API: Get Sync State Version
-app.get("/api/sync/version", async (req, res) => {
-  const syncKey = "reader_sync_v1.json";
-  try {
-    if (isR2Configured()) {
-      try {
-        const s3 = getS3Client();
-        const command = new HeadObjectCommand({
-          Bucket: BUCKET,
-          Key: syncKey,
-        });
-        const data = await s3.send(command);
-        const version = data.LastModified ? new Date(data.LastModified).getTime() : 0;
-        res.setHeader("Cache-Control", "public, s-maxage=10, stale-while-revalidate=60");
-        return res.json({ version });
-      } catch (e: any) {
-        return res.json({ version: 0 });
+const SYNC_FILES = [
+  "sync_preferences.json",
+  "sync_progress.json",
+  "sync_highlights.json",
+  "sync_metadata.json",
+  "sync_history.json"
+];
+
+const SYNC_KEY_MAPPING: Record<string, string> = {
+  fontSize: "sync_preferences.json",
+  theme: "sync_preferences.json",
+  fontFamily: "sync_preferences.json",
+  userName: "sync_preferences.json",
+  customThemes: "sync_preferences.json",
+  readerTexture: "sync_preferences.json",
+  bookshelfLayout: "sync_preferences.json",
+  homeSections: "sync_preferences.json",
+  lineHeight: "sync_preferences.json",
+  textIndent: "sync_preferences.json",
+
+  scrollPositions: "sync_progress.json",
+  completedBooks: "sync_progress.json",
+  completedChapters: "sync_progress.json",
+
+  highlights: "sync_highlights.json",
+  quickNotes: "sync_highlights.json",
+
+  bookMetadata: "sync_metadata.json",
+  bookCollections: "sync_metadata.json",
+
+  readHistory: "sync_history.json",
+  readingStats: "sync_history.json",
+};
+
+async function migrateLegacySync(s3Client: any) {
+  const legacyKey = "reader_sync_v1.json";
+  let legacyData: any = null;
+  
+  if (isR2Configured() && s3Client) {
+    try {
+      const getCmd = new GetObjectCommand({ Bucket: BUCKET, Key: legacyKey });
+      const data = await s3Client.send(getCmd);
+      if (data.Body) {
+        const text = await data.Body.transformToString();
+        legacyData = JSON.parse(text);
+      }
+    } catch (e) {}
+  } else {
+    const syncPath = path.join(LOCAL_DATA_DIR, legacyKey);
+    if (fs.existsSync(syncPath)) {
+      legacyData = JSON.parse(fs.readFileSync(syncPath, "utf-8"));
+    }
+  }
+
+  if (legacyData) {
+    console.log("Migrating legacy sync data to split files...");
+    const splitData: Record<string, any> = {
+      "sync_preferences.json": {},
+      "sync_progress.json": {},
+      "sync_highlights.json": {},
+      "sync_metadata.json": {},
+      "sync_history.json": {},
+    };
+
+    for (const key of Object.keys(legacyData)) {
+      const fileName = SYNC_KEY_MAPPING[key];
+      if (fileName) {
+        splitData[fileName][key] = legacyData[key];
       }
     }
-    
-    // Local fallback
-    const syncPath = path.join(LOCAL_DATA_DIR, syncKey);
-    if (fs.existsSync(syncPath)) {
-      const fStat = fs.statSync(syncPath);
-      return res.json({ version: fStat.mtimeMs });
+
+    for (const fileName of SYNC_FILES) {
+      const fileContent = JSON.stringify(splitData[fileName]);
+      if (isR2Configured() && s3Client) {
+        try {
+          const putCmd = new PutObjectCommand({
+            Bucket: BUCKET,
+            Key: fileName,
+            Body: fileContent,
+            ContentType: "application/json",
+          });
+          await s3Client.send(putCmd);
+        } catch (e) {
+          console.error(`Failed to migrate ${fileName} to R2`, e);
+        }
+      }
+      try {
+        fs.writeFileSync(path.join(LOCAL_DATA_DIR, fileName), fileContent, "utf-8");
+      } catch (e) {}
     }
-    return res.json({ version: 0 });
+
+    if (isR2Configured() && s3Client) {
+      try {
+        const delCmd = new DeleteObjectCommand({ Bucket: BUCKET, Key: legacyKey });
+        await s3Client.send(delCmd);
+      } catch (e) {}
+    }
+    try {
+      const legacyPath = path.join(LOCAL_DATA_DIR, legacyKey);
+      if (fs.existsSync(legacyPath)) {
+        fs.unlinkSync(legacyPath);
+      }
+    } catch (e) {}
+  }
+}
+
+// 5. API: Get Sync State Version
+app.get("/api/sync/version", async (req, res) => {
+  try {
+    let maxVersion = 0;
+    if (isR2Configured()) {
+      const s3 = getS3Client();
+      const headPromises = SYNC_FILES.map(async (fileName) => {
+        try {
+          const command = new HeadObjectCommand({ Bucket: BUCKET, Key: fileName });
+          const data = await s3.send(command);
+          return data.LastModified ? new Date(data.LastModified).getTime() : 0;
+        } catch (e) {
+          return 0;
+        }
+      });
+      const versions = await Promise.all(headPromises);
+      maxVersion = Math.max(...versions);
+      
+      if (maxVersion === 0) {
+        try {
+          const command = new HeadObjectCommand({ Bucket: BUCKET, Key: "reader_sync_v1.json" });
+          const data = await s3.send(command);
+          maxVersion = data.LastModified ? new Date(data.LastModified).getTime() : 0;
+        } catch (e) {}
+      }
+
+      res.setHeader("Cache-Control", "public, s-maxage=10, stale-while-revalidate=60");
+      return res.json({ version: maxVersion });
+    }
+    
+    const versions = SYNC_FILES.map((fileName) => {
+      const syncPath = path.join(LOCAL_DATA_DIR, fileName);
+      if (fs.existsSync(syncPath)) {
+        return fs.statSync(syncPath).mtimeMs;
+      }
+      return 0;
+    });
+    maxVersion = Math.max(...versions);
+    if (maxVersion === 0) {
+      const legacyPath = path.join(LOCAL_DATA_DIR, "reader_sync_v1.json");
+      if (fs.existsSync(legacyPath)) {
+        maxVersion = fs.statSync(legacyPath).mtimeMs;
+      }
+    }
+    return res.json({ version: maxVersion });
   } catch (err: any) {
     return res.json({ version: 0 });
   }
@@ -460,9 +584,6 @@ app.get("/api/sync/version", async (req, res) => {
 
 // 5.1 API: Get Sync State
 app.get("/api/sync", async (req, res) => {
-  const syncKey = "reader_sync_v1.json";
-  
-  // Set cache headers if version is provided
   if (req.query.v) {
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
   } else {
@@ -470,41 +591,47 @@ app.get("/api/sync", async (req, res) => {
   }
 
   try {
-    if (isR2Configured()) {
-      try {
-        const s3 = getS3Client();
-        const command = new GetObjectCommand({
-          Bucket: BUCKET,
-          Key: syncKey,
-        });
-        const data = await s3.send(command);
-        if (data.Body) {
-          const text = await data.Body.transformToString();
-          return res.json(JSON.parse(text));
+    const s3 = isR2Configured() ? getS3Client() : null;
+    await migrateLegacySync(s3);
+
+    const combinedState: any = {};
+    if (s3) {
+      const readPromises = SYNC_FILES.map(async (fileName) => {
+        try {
+          const getCmd = new GetObjectCommand({ Bucket: BUCKET, Key: fileName });
+          const data = await s3.send(getCmd);
+          if (data.Body) {
+            const text = await data.Body.transformToString();
+            return JSON.parse(text);
+          }
+        } catch (e) {}
+        return null;
+      });
+      const results = await Promise.all(readPromises);
+      results.forEach((data) => {
+        if (data) {
+          Object.assign(combinedState, data);
         }
-      } catch (e: any) {
-        const errName = e.name || "";
-        const errMsg = e.message || "";
-        const isNotFound = errName === "NoSuchKey" || 
-                           e.$metadata?.httpStatusCode === 404 || 
-                           errName.includes("NotFound") || 
-                           errMsg.includes("NoSuchKey") || 
-                           errMsg.includes("not exist");
-        if (isNotFound) {
-          console.log("Sync state file not found on R2, checking local");
-        } else {
-          console.warn("R2 failed to load sync state, falling back to local:", e);
-        }
+      });
+    }
+
+    const localData: any = {};
+    SYNC_FILES.forEach((fileName) => {
+      const localPath = path.join(LOCAL_DATA_DIR, fileName);
+      if (fs.existsSync(localPath)) {
+        try {
+          const text = fs.readFileSync(localPath, "utf-8");
+          Object.assign(localData, JSON.parse(text));
+        } catch (e) {}
       }
-    }
+    });
+
+    const finalState = Object.keys(combinedState).length > 0 ? combinedState : localData;
     
-    // Local fallback
-    const syncPath = path.join(LOCAL_DATA_DIR, syncKey);
-    if (fs.existsSync(syncPath)) {
-      const text = fs.readFileSync(syncPath, "utf-8");
-      return res.json(JSON.parse(text));
+    if (Object.keys(finalState).length === 0) {
+      return res.json(null);
     }
-    return res.json(null);
+    return res.json(finalState);
   } catch (err: any) {
     console.error("Failed to load sync state", err);
     return res.json(null);
@@ -513,35 +640,51 @@ app.get("/api/sync", async (req, res) => {
 
 // 6. API: Save Sync State
 app.post("/api/sync", async (req, res) => {
-  const syncKey = "reader_sync_v1.json";
   try {
     const state = req.body || {};
-    let savedToR2 = false;
-    if (isR2Configured()) {
-      try {
-        const s3 = getS3Client();
-        const command = new PutObjectCommand({
-          Bucket: BUCKET,
-          Key: syncKey,
-          Body: JSON.stringify(state),
-          ContentType: "application/json",
-        });
-        await s3.send(command);
-        savedToR2 = true;
-      } catch (r2Err: any) {
-        console.warn("R2 failed to save sync state, writing locally only:", r2Err.message);
+    const s3 = isR2Configured() ? getS3Client() : null;
+
+    const splitData: Record<string, any> = {
+      "sync_preferences.json": {},
+      "sync_progress.json": {},
+      "sync_highlights.json": {},
+      "sync_metadata.json": {},
+      "sync_history.json": {},
+    };
+
+    for (const key of Object.keys(state)) {
+      const fileName = SYNC_KEY_MAPPING[key];
+      if (fileName) {
+        splitData[fileName][key] = state[key];
       }
     }
-    
-    // Always write locally as cache and resilient fallback
-    try {
-      const syncPath = path.join(LOCAL_DATA_DIR, syncKey);
-      fs.writeFileSync(syncPath, JSON.stringify(state), "utf-8");
-    } catch (e) {
-      console.warn("Failed to write sync state locally (expected on Vercel):", e);
-    }
 
-    
+    const savePromises = SYNC_FILES.map(async (fileName) => {
+      const fileContent = JSON.stringify(splitData[fileName]);
+      let savedToR2 = false;
+      if (s3) {
+        try {
+          const putCmd = new PutObjectCommand({
+            Bucket: BUCKET,
+            Key: fileName,
+            Body: fileContent,
+            ContentType: "application/json",
+          });
+          await s3.send(putCmd);
+          savedToR2 = true;
+        } catch (e) {
+          console.error(`Failed to save ${fileName} to R2`, e);
+        }
+      }
+      try {
+        fs.writeFileSync(path.join(LOCAL_DATA_DIR, fileName), fileContent, "utf-8");
+      } catch (e) {}
+      return savedToR2;
+    });
+
+    const results = await Promise.all(savePromises);
+    const savedToR2 = results.every(Boolean);
+
     return res.json({ success: true, savedToR2 });
   } catch (err: any) {
     console.error("Failed to save sync state", err);
@@ -551,82 +694,102 @@ app.post("/api/sync", async (req, res) => {
 
 // 6.1 API: Patch Sync State
 app.patch("/api/sync", async (req, res) => {
-  const syncKey = "reader_sync_v1.json";
   try {
     const patch = req.body || {};
-    let currentState: any = {};
-    
-    // 1. Fetch current state
-    if (isR2Configured()) {
-      try {
-        const s3 = getS3Client();
-        const getCmd = new GetObjectCommand({ Bucket: BUCKET, Key: syncKey });
-        const data = await s3.send(getCmd);
-        if (data.Body) {
-          const text = await data.Body.transformToString();
-          currentState = JSON.parse(text);
-        }
-      } catch (e: any) {
-        const isNotFound = e.name === "NoSuchKey" || e.$metadata?.httpStatusCode === 404;
-        if (!isNotFound) console.warn("R2 failed to load for patch:", e.message);
-      }
-    } else {
-      const syncPath = path.join(LOCAL_DATA_DIR, syncKey);
-      if (fs.existsSync(syncPath)) {
-        currentState = JSON.parse(fs.readFileSync(syncPath, "utf-8"));
-      }
-    }
+    const s3 = isR2Configured() ? getS3Client() : null;
 
-    // 2. Shallow merge at the top-level keys
-    const newState = { ...currentState };
+    await migrateLegacySync(s3);
+
+    const filesToUpdate: Record<string, Record<string, any>> = {};
     for (const key of Object.keys(patch)) {
-      if (typeof patch[key] === 'object' && patch[key] !== null && !Array.isArray(patch[key])) {
-        newState[key] = { ...(newState[key] || {}), ...patch[key] };
+      const fileName = SYNC_KEY_MAPPING[key];
+      if (fileName) {
+        if (!filesToUpdate[fileName]) filesToUpdate[fileName] = {};
+        filesToUpdate[fileName][key] = patch[key];
+      }
+    }
+
+    const affectedFiles = Object.keys(filesToUpdate);
+    if (affectedFiles.length === 0) {
+      return res.json({ success: true, version: 0 });
+    }
+
+    const updatePromises = affectedFiles.map(async (fileName) => {
+      const filePatch = filesToUpdate[fileName];
+      let currentContent: any = {};
+
+      if (s3) {
+        try {
+          const getCmd = new GetObjectCommand({ Bucket: BUCKET, Key: fileName });
+          const data = await s3.send(getCmd);
+          if (data.Body) {
+            const text = await data.Body.transformToString();
+            currentContent = JSON.parse(text);
+          }
+        } catch (e: any) {
+          const isNotFound = e.name === "NoSuchKey" || e.$metadata?.httpStatusCode === 404;
+          if (!isNotFound) console.warn(`R2 failed to load ${fileName} for patch:`, e.message);
+        }
       } else {
-        newState[key] = patch[key];
+        const localPath = path.join(LOCAL_DATA_DIR, fileName);
+        if (fs.existsSync(localPath)) {
+          try {
+            currentContent = JSON.parse(fs.readFileSync(localPath, "utf-8"));
+          } catch (e) {}
+        }
       }
-    }
-    newState.timestamp = Date.now();
 
-    // 3. Save merged state
-    let savedToR2 = false;
-    if (isR2Configured()) {
-      try {
-        const s3 = getS3Client();
-        const putCmd = new PutObjectCommand({
-          Bucket: BUCKET,
-          Key: syncKey,
-          Body: JSON.stringify(newState),
-          ContentType: "application/json",
-        });
-        await s3.send(putCmd);
-        savedToR2 = true;
-      } catch (e: any) {
-        console.warn("R2 failed to save patched state:", e.message);
+      const mergedContent = { ...currentContent };
+      for (const key of Object.keys(filePatch)) {
+        if (typeof filePatch[key] === 'object' && filePatch[key] !== null && !Array.isArray(filePatch[key])) {
+          mergedContent[key] = { ...(mergedContent[key] || {}), ...filePatch[key] };
+        } else {
+          mergedContent[key] = filePatch[key];
+        }
       }
-    }
-    
-    try {
-      const syncPath = path.join(LOCAL_DATA_DIR, syncKey);
-      fs.writeFileSync(syncPath, JSON.stringify(newState), "utf-8");
-    } catch (e) {}
+      mergedContent.timestamp = Date.now();
 
-    // 4. Get new version to return to client
-    let newVersion = 0;
-    if (isR2Configured() && savedToR2) {
-      try {
-        const headCmd = new HeadObjectCommand({ Bucket: BUCKET, Key: syncKey });
-        const headData = await getS3Client().send(headCmd);
-        if (headData.LastModified) newVersion = new Date(headData.LastModified).getTime();
-      } catch (e) {}
-    } else {
-      try {
-        const syncPath = path.join(LOCAL_DATA_DIR, syncKey);
-        if (fs.existsSync(syncPath)) newVersion = fs.statSync(syncPath).mtimeMs;
-      } catch (e) {}
-    }
+      let savedToR2 = false;
+      if (s3) {
+        try {
+          const putCmd = new PutObjectCommand({
+            Bucket: BUCKET,
+            Key: fileName,
+            Body: JSON.stringify(mergedContent),
+            ContentType: "application/json",
+          });
+          await s3.send(putCmd);
+          savedToR2 = true;
+        } catch (e: any) {
+          console.warn(`R2 failed to save patched ${fileName}:`, e.message);
+        }
+      }
 
-    return res.json({ success: true, savedToR2, version: newVersion });
+      try {
+        fs.writeFileSync(path.join(LOCAL_DATA_DIR, fileName), JSON.stringify(mergedContent), "utf-8");
+      } catch (e) {}
+
+      let fileVersion = 0;
+      if (s3 && savedToR2) {
+        try {
+          const headCmd = new HeadObjectCommand({ Bucket: BUCKET, Key: fileName });
+          const headData = await s3.send(headCmd);
+          if (headData.LastModified) fileVersion = new Date(headData.LastModified).getTime();
+        } catch (e) {}
+      } else {
+        try {
+          const localPath = path.join(LOCAL_DATA_DIR, fileName);
+          if (fs.existsSync(localPath)) fileVersion = fs.statSync(localPath).mtimeMs;
+        } catch (e) {}
+      }
+
+      return fileVersion;
+    });
+
+    const versions = await Promise.all(updatePromises);
+    const newVersion = Math.max(...versions);
+
+    return res.json({ success: true, version: newVersion });
   } catch (err: any) {
     console.error("Failed to patch sync state", err);
     return res.status(500).json({ error: err.message || "Failed to patch sync state" });

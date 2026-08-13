@@ -18,50 +18,58 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AutoSync() {
-  const state = useStore();
+  const patchSyncToDrive = useStore(state => state.patchSyncToDrive);
+  const token = useStore(state => state.token);
   const lastStateRef = useRef<any>(null);
   const pendingPatchRef = useRef<any>({});
   const timeoutRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!state.token) return;
+    if (!token) return;
     
     const watchFields = [
       'scrollPositions', 'highlights', 'quickNotes', 'completedBooks',
       'completedChapters', 'fontSize', 'theme', 'fontFamily', 'userName',
       'readHistory', 'customThemes', 'readerTexture', 'bookshelfLayout',
-      'homeSections', 'bookCollections', 'bookMetadata', 'readingStats',
+      'homeSections', 'bookCollections', 'bookMetadata',
       'lineHeight', 'textIndent'
     ];
 
-    const currentState: any = {};
-    watchFields.forEach(f => currentState[f] = (state as any)[f]);
+    const storeState = useStore.getState();
+    const initialState: any = {};
+    watchFields.forEach(f => initialState[f] = (storeState as any)[f]);
+    lastStateRef.current = initialState;
 
-    if (!lastStateRef.current) {
-      lastStateRef.current = currentState;
-      return; 
-    }
+    const unsubscribe = useStore.subscribe((state) => {
+      const currentState: any = {};
+      watchFields.forEach(f => currentState[f] = (state as any)[f]);
 
-    let hasChanges = false;
-    watchFields.forEach(f => {
-      if (JSON.stringify(currentState[f]) !== JSON.stringify(lastStateRef.current[f])) {
-        pendingPatchRef.current[f] = currentState[f];
-        lastStateRef.current[f] = currentState[f];
-        hasChanges = true;
+      let hasChanges = false;
+      watchFields.forEach(f => {
+        if (JSON.stringify(currentState[f]) !== JSON.stringify(lastStateRef.current[f])) {
+          pendingPatchRef.current[f] = currentState[f];
+          lastStateRef.current[f] = currentState[f];
+          hasChanges = true;
+        }
+      });
+      
+      if (hasChanges) {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => {
+          const patch = { ...pendingPatchRef.current };
+          pendingPatchRef.current = {};
+          if (Object.keys(patch).length > 0) {
+            patchSyncToDrive(patch);
+          }
+        }, 5000); // 5 second debounce for auto sync patch
       }
     });
-    
-    if (hasChanges) {
+
+    return () => {
+      unsubscribe();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => {
-        const patch = { ...pendingPatchRef.current };
-        pendingPatchRef.current = {};
-        if (Object.keys(patch).length > 0) {
-          state.patchSyncToDrive(patch);
-        }
-      }, 5000); // 5 second debounce for auto sync patch
-    }
-  }, [state]);
+    };
+  }, [token, patchSyncToDrive]);
 
   return null;
 }
