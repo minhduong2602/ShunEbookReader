@@ -452,11 +452,12 @@ export default function Reader() {
         className={`fixed bottom-0 inset-x-0 backdrop-blur-md shadow-chip border-t border-current/15 z-50 transition-transform duration-300 pb-safe ${showControls ? 'translate-y-0' : 'translate-y-full'} ${activeCustomTheme ? '' : 'bg-white/95 dark:bg-[#0F0F0F]/95'}`}
         style={activeCustomTheme ? { backgroundColor: activeCustomTheme.surface, color: activeCustomTheme.text } : undefined}
       >
-        <div className="max-w-3xl mx-auto p-4 space-y-5">
+        <div className="max-w-3xl mx-auto px-4 py-2.5 space-y-2">
           
-          {/* Font Controls */}
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 bg-[#F0E7D8] dark:bg-black/40 p-1.5 rounded-full">
+          {/* Row 1: Font Family & Font Size */}
+          <div className="flex items-center justify-between gap-3">
+            {/* Font Family Segment */}
+            <div className="flex items-center bg-[#F0E7D8] dark:bg-black/40 p-0.5 rounded-lg shrink-0">
               {[
                 { id: 'sans', label: 'Sans', fontClass: 'font-sans' },
                 { id: 'serif', label: 'Serif', fontClass: 'font-serif' },
@@ -465,98 +466,99 @@ export default function Reader() {
                 <button
                   key={font.id}
                   onClick={() => setFontFamily(font.id as any)}
-                  className={`flex-1 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${fontFamily === font.id ? 'bg-white text-[#E8604F] shadow-chip' : 'text-[#6B5645] dark:text-[#888888] hover:text-[#3D2B1F] dark:hover:text-white'}`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${fontFamily === font.id ? 'bg-white dark:bg-zinc-800 text-[#E8604F] shadow-sm' : 'text-[#6B5645] dark:text-[#888888] hover:text-[#3D2B1F] dark:hover:text-white'}`}
                 >
                   <span className={font.fontClass}>{font.label}</span>
                 </button>
               ))}
             </div>
 
-            <div className="flex items-center gap-4 px-3">
-              <span className="text-xs font-bold opacity-60">A</span>
+            {/* Font Size Slider */}
+            <div className="flex items-center gap-2 flex-1 min-w-[130px] max-w-xs">
+              <span className="text-[11px] font-bold opacity-60 shrink-0">A</span>
               <input
                 type="range"
                 min="12"
                 max="32"
                 value={fontSize}
                 onChange={(e) => setFontSize(Number(e.target.value))}
-                className="flex-1 h-2 bg-[#F0E7D8] dark:bg-black/40 rounded-lg appearance-none cursor-pointer accent-[#E8604F]"
+                className="flex-1 h-1.5 bg-[#F0E7D8] dark:bg-black/40 rounded-lg appearance-none cursor-pointer accent-[#E8604F]"
               />
-              <span className="text-xl font-bold opacity-90">A</span>
+              <span className="text-base font-bold opacity-90 shrink-0">A</span>
             </div>
+          </div>
 
+          {/* Row 2: Line Height & Texture */}
+          <div className="flex items-center justify-between gap-3 text-[11px]">
             {/* Line Height Selector */}
-            <div className="flex items-center gap-2 px-3 pt-1">
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
               <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 shrink-0">Dòng</span>
-              <div className="flex gap-1.5 flex-1">
+              <div className="flex gap-1 flex-1">
                 {[1.4, 1.6, 1.8, 2.0, 2.2].map(lh => (
                   <button
                     key={lh}
                     onClick={() => setLineHeight(lh)}
-                    className={`flex-1 py-1 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${lineHeight === lh ? 'bg-[#E8604F] text-white border-[#E8604F]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
+                    className={`flex-1 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer ${lineHeight === lh ? 'bg-[#E8604F] text-white border-[#E8604F]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
                   >
                     {lh}
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* Texture Selector */}
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B5645] dark:text-[#888888] shrink-0">Nền</span>
+              <div className="flex gap-1 flex-1">
+                {(['none','paper','linen','aged'] as const).map(tx => (
+                  <button
+                    key={tx}
+                    onClick={() => setReaderTexture(tx)}
+                    className={`flex-1 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer capitalize ${readerTexture === tx ? 'bg-[#E8604F] text-white border-[#E8604F]' : 'border-[#E4D9C8] dark:border-[#222222] text-[#6B5645] dark:text-[#888888]'}`}
+                  >
+                    {tx === 'none' ? 'Tắt' : tx === 'paper' ? 'Giấy' : tx === 'linen' ? 'Vải' : 'Cũ'}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Theme Selection */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pb-0.5">
-              <button
-                onClick={() => setTheme('light')}
-                className={`flex-1 py-2.5 px-3 rounded-full flex items-center justify-center gap-1.5 text-xs font-bold border transition-all cursor-pointer whitespace-nowrap ${theme === 'light' ? 'border-[#E8604F] bg-[#E8604F]/10 text-[#E8604F]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
-              >
-                <Sun className="w-3.5 h-3.5" /> Cozy Paper
-              </button>
-              <button
-                onClick={() => setTheme('sepia')}
-                className={`flex-1 py-2.5 px-3 rounded-full flex items-center justify-center gap-1.5 text-xs font-bold border transition-all cursor-pointer whitespace-nowrap ${theme === 'sepia' ? 'border-[#8B6B4A] bg-[#F4ECD8] text-[#5B4636]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
-              >
-                <Coffee className="w-3.5 h-3.5" /> Sepia
-              </button>
-              <button
-                onClick={() => setTheme('dark')}
-                className={`flex-1 py-2.5 px-3 rounded-full flex items-center justify-center gap-1.5 text-xs font-bold border transition-all cursor-pointer whitespace-nowrap ${theme === 'dark' ? 'border-[#E8604F] bg-[#0F0F0F] text-[#ADADAD]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
-              >
-                <Moon className="w-3.5 h-3.5" /> Night
-              </button>
-            </div>
+          {/* Row 3: Themes (Built-in + Custom) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5">
+            <button
+              onClick={() => setTheme('light')}
+              className={`py-1 px-2.5 rounded-md flex items-center justify-center gap-1 text-xs font-bold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${theme === 'light' ? 'border-[#E8604F] bg-[#E8604F]/10 text-[#E8604F]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
+            >
+              <Sun className="w-3 h-3" /> Cozy
+            </button>
+            <button
+              onClick={() => setTheme('sepia')}
+              className={`py-1 px-2.5 rounded-md flex items-center justify-center gap-1 text-xs font-bold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${theme === 'sepia' ? 'border-[#8B6B4A] bg-[#F4ECD8] text-[#5B4636]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
+            >
+              <Coffee className="w-3 h-3" /> Sepia
+            </button>
+            <button
+              onClick={() => setTheme('dark')}
+              className={`py-1 px-2.5 rounded-md flex items-center justify-center gap-1 text-xs font-bold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${theme === 'dark' ? 'border-[#E8604F] bg-[#0F0F0F] text-[#ADADAD]' : 'border-[#E4D9C8] dark:border-[#222222]'}`}
+            >
+              <Moon className="w-3 h-3" /> Night
+            </button>
 
-            {/* Custom Themes list */}
             {customThemes.length > 0 && (
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 shrink-0">Tùy chỉnh:</span>
+              <>
+                <div className="w-px h-4 bg-current/20 shrink-0 mx-0.5" />
                 {customThemes.map(ct => (
                   <button
                     key={ct.id}
                     onClick={() => setTheme(ct.id)}
                     style={{ backgroundColor: ct.bg, color: ct.text, borderColor: ct.accent }}
-                    className={`px-3 py-1 rounded-full text-xs font-bold border-2 transition-all cursor-pointer shrink-0 ${theme === ct.id ? 'ring-2 ring-[#E8604F] scale-105 shadow-chip' : 'opacity-80 hover:opacity-100'}`}
+                    className={`px-2.5 py-0.5 rounded-md text-xs font-bold border transition-all cursor-pointer shrink-0 ${theme === ct.id ? 'ring-1 ring-[#E8604F] scale-105 shadow-sm' : 'opacity-80 hover:opacity-100'}`}
                   >
                     🎨 {ct.name}
                   </button>
                 ))}
-              </div>
+              </>
             )}
-          </div>
-
-          {/* Texture + Focus Mode */}
-          <div className="flex items-center gap-2 pt-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B5645] dark:text-[#888888] shrink-0">Texture</span>
-            <div className="flex gap-1.5 flex-1">
-              {(['none','paper','linen','aged'] as const).map(tx => (
-                <button
-                  key={tx}
-                  onClick={() => setReaderTexture(tx)}
-                  className={`flex-1 py-1.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer capitalize ${readerTexture === tx ? 'bg-[#E8604F] text-white border-[#E8604F]' : 'border-[#E4D9C8] dark:border-[#222222] text-[#6B5645] dark:text-[#888888]'}`}
-                >
-                  {tx === 'none' ? 'Tắt' : tx === 'paper' ? 'Giấy' : tx === 'linen' ? 'Vải' : 'Cũ'}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </div>
