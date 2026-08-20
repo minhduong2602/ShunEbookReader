@@ -1,14 +1,14 @@
 import { useState, useEffect, MouseEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Book, LogOut, Loader2, Folder as FolderIcon, Download, Clock, Settings, 
   FileText, List, Upload, MessageSquare, CheckCircle2, Circle, ArrowUpDown, 
   LayoutGrid, Search, Home, ArrowUpRight, Menu, X as XIcon, ChevronRight, 
   ChevronLeft, Sparkles, Heart, Library, Bookmark, ShoppingBag, StickyNote,
-  AlignJustify, SlidersHorizontal
+  AlignJustify, SlidersHorizontal, Trash2
 } from 'lucide-react';
 import { useStore } from '../store';
-import { getFolders, DriveFile } from '../lib/drive';
+import { getFolders, DriveFile, deleteBook } from '../lib/drive';
 import UploadModal from '../components/UploadModal';
 import NotesTab from '../components/NotesTab';
 import BookCoverCard from '../components/BookCoverCard';
@@ -19,11 +19,15 @@ import ReadingStatsWidget from '../components/ReadingStatsWidget';
 
 export default function Bookshelf() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab') as 'home' | 'library' | 'notes' | null;
+
   const { 
     token, folderId, logout, loadSyncFromDrive, readHistory, userName, 
     completedBooks, toggleBookCompleted, triggerSyncToDrive, quickNotes,
     bookshelfLayout, setBookshelfLayout, homeSections,
     bookCollections, setBookCollection, bookMetadata,
+    deleteBookLocally,
   } = useStore();
 
   const [books, setBooks] = useState<DriveFile[]>([]);
@@ -31,9 +35,27 @@ export default function Bookshelf() {
   const [error, setError] = useState('');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   
-  const [activeTab, setActiveTab] = useState<'home' | 'library' | 'notes'>(
-    (localStorage.getItem('reader_active_tab') as any) || 'home'
-  );
+  const [activeTab, setActiveTab] = useState<'home' | 'library' | 'notes'>(() => {
+    if (tabParam && ['home', 'library', 'notes'].includes(tabParam)) {
+      return tabParam;
+    }
+    const saved = localStorage.getItem('reader_active_tab') as 'home' | 'library' | 'notes' | null;
+    if (saved && ['home', 'library', 'notes'].includes(saved)) {
+      return saved;
+    }
+    return 'home';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('reader_active_tab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (tabParam && ['home', 'library', 'notes'].includes(tabParam) && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
   const [sortBy, setSortBy] = useState<SortOption>(
     (localStorage.getItem('reader_sort_by') as any) || 'newest'
   );
@@ -46,6 +68,25 @@ export default function Bookshelf() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isChatOpenMobile, setIsChatOpenMobile] = useState(false);
+
+  const [bookToDelete, setBookToDelete] = useState<DriveFile | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!bookToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteBook(token, bookToDelete.name);
+      deleteBookLocally(bookToDelete.id);
+      deleteBookLocally(bookToDelete.name);
+      setBooks(prev => prev.filter(b => b.id !== bookToDelete.id && b.name !== bookToDelete.name));
+      setBookToDelete(null);
+    } catch (err: any) {
+      alert(err.message || 'Xóa truyện thất bại. Vui lòng thử lại.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   useEffect(() => {
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -480,6 +521,7 @@ export default function Bookshelf() {
                           rating={meta?.rating || 0}
                           onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
                           onToggleCompleted={(e) => handleToggleBookRead(e, book.id)}
+                          onDelete={() => setBookToDelete(book)}
                         />
                       );
                     })}
@@ -571,10 +613,24 @@ export default function Bookshelf() {
                           {meta?.rating && meta.rating > 0 ? (
                             <span className="text-[10px] font-bold text-[#EDB65B]">{'★'.repeat(meta.rating)}</span>
                           ) : null}
-                          <button onClick={(e) => handleToggleBookRead(e, book.id)} className="p-1">
+                          <button 
+                            onClick={(e) => handleToggleBookRead(e, book.id)} 
+                            className="p-1 text-[#6B5645] hover:scale-110 transition-transform cursor-pointer"
+                            title={completedBooks[book.id] || completedBooks[book.name] ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu đã đọc'}
+                          >
                             {(completedBooks[book.id] || completedBooks[book.name])
                               ? <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                               : <Circle className="w-4 h-4 text-[#ADADAD]" />}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setBookToDelete(book);
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                            title="Xóa bộ truyện"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -601,6 +657,7 @@ export default function Bookshelf() {
                         size={bookshelfLayout === 'compact' ? 'sm' : 'md'}
                         onClick={() => navigate(`/book/${book.id}`, { state: { bookName: book.name } })}
                         onToggleCompleted={(e) => handleToggleBookRead(e, book.id)}
+                        onDelete={() => setBookToDelete(book)}
                       />
                     );
                   })}
@@ -693,6 +750,49 @@ export default function Bookshelf() {
       {/* Home Section Manager Modal */}
       {showHomeSectionManager && (
         <HomeSectionManager onClose={() => setShowHomeSectionManager(false)} />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {bookToDelete && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#FBF6EC] rounded-[28px] max-w-md w-full p-6 sm:p-7 shadow-2xl border border-[#EFE6D8] space-y-4 animate-scale-up">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto text-red-600 shadow-chip">
+              <Trash2 className="w-7 h-7" />
+            </div>
+
+            <div className="text-center space-y-2">
+              <h3 className="font-display font-bold text-xl text-[#3D2B1F]">
+                Xác nhận xóa bộ truyện?
+              </h3>
+              <p className="text-sm text-[#6B5645]">
+                Bạn có chắc chắn muốn xóa bộ truyện <span className="font-bold text-[#3D2B1F]">"{bookToDelete.name}"</span> không?
+              </p>
+              <div className="text-xs text-red-700 font-medium bg-red-50/80 p-3 rounded-2xl border border-red-200/60 leading-relaxed text-left">
+                ⚠️ <span className="font-bold">Lưu ý:</span> Tất cả các chương truyện trong thư mục này và dữ liệu liên quan sẽ bị xóa vĩnh viễn khỏi hệ thống.
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setBookToDelete(null)}
+                className="flex-1 py-3 bg-[#F0E7D8] hover:bg-[#E4D9C8] text-[#3D2B1F] font-bold text-xs sm:text-sm rounded-full transition-colors cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-full transition-all shadow-chip flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              >
+                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {isDeleting ? 'Đang xóa...' : 'Xóa bộ truyện'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
 

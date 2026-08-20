@@ -156,6 +156,7 @@ interface AppState {
   // Phase 2 actions
   setBookCollection: (bookId: string, shelf: BookShelf | null) => void;
   setBookMetadata: (bookId: string, updates: Partial<BookMetadata>) => void;
+  deleteBookLocally: (bookId: string) => void;
 
   // Phase 1 actions
   setLineHeight: (height: number) => void;
@@ -544,6 +545,37 @@ export const useStore = create<AppState>((set, get) => ({
       });
       localStorage.setItem('reader_book_metadata', JSON.stringify(newMeta));
       return { bookMetadata: newMeta };
+    });
+  },
+  deleteBookLocally: (bookId: string) => {
+    set((state) => {
+      const keys = [bookId, encodeURIComponent(bookId), decodeURIComponent(bookId)];
+      
+      // 1. Remove from readHistory
+      const readHistory = state.readHistory.filter(h => !keys.includes(h.bookId) && !keys.includes(h.bookName));
+      localStorage.setItem('reader_history', JSON.stringify(readHistory));
+
+      // 2. Remove from completedBooks
+      const completedBooks = { ...state.completedBooks };
+      keys.forEach(k => delete completedBooks[k]);
+      localStorage.setItem('reader_completed_books', JSON.stringify(completedBooks));
+
+      // 3. Remove from bookCollections
+      const bookCollections = { ...state.bookCollections };
+      keys.forEach(k => delete bookCollections[k]);
+      localStorage.setItem('reader_book_collections', JSON.stringify(bookCollections));
+
+      // 4. Remove from bookMetadata
+      const bookMetadata = { ...state.bookMetadata };
+      keys.forEach(k => delete bookMetadata[k]);
+      localStorage.setItem('reader_book_metadata', JSON.stringify(bookMetadata));
+
+      return {
+        readHistory,
+        completedBooks,
+        bookCollections,
+        bookMetadata,
+      };
     });
   },
 

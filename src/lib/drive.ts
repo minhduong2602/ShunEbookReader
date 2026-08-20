@@ -94,6 +94,38 @@ export async function getFiles(token: string | null, parentId: string | null): P
   }
 }
 
+export async function deleteBook(token: string | null, bookId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/books/${encodeURIComponent(bookId)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Xóa truyện thất bại');
+    }
+    return true;
+  } catch (err) {
+    console.error('Failed to delete book', err);
+    throw err;
+  }
+}
+
+export async function deleteChapter(token: string | null, chapterId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/chapters/${encodeURIComponent(chapterId)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Xóa chương thất bại');
+    }
+    return true;
+  } catch (err) {
+    console.error('Failed to delete chapter', err);
+    throw err;
+  }
+}
+
 export async function getFileContent(
   token: string | null, 
   fileId: string, 

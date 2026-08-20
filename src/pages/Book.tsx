@@ -1,8 +1,8 @@
 import { useState, useEffect, MouseEvent } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ChevronLeft, FileText, Loader2, Upload, CheckCircle2, Circle, ArrowUpDown, CheckCheck, BookCheck, Sparkles, Star, Tag, BookOpen, X, Edit3, Image, UploadCloud, RotateCcw, Save } from 'lucide-react';
+import { ChevronLeft, FileText, Loader2, Upload, CheckCircle2, Circle, ArrowUpDown, CheckCheck, BookCheck, Sparkles, Star, Tag, BookOpen, X, Edit3, Image, UploadCloud, RotateCcw, Save, Trash2 } from 'lucide-react';
 import { useStore, BookShelf } from '../store';
-import { getFiles, DriveFile } from '../lib/drive';
+import { getFiles, DriveFile, deleteBook } from '../lib/drive';
 import { formatChapterName } from '../lib/utils';
 import UploadModal from '../components/UploadModal';
 import BookCoverCard from '../components/BookCoverCard';
@@ -22,6 +22,7 @@ export default function Book() {
     triggerSyncToDrive,
     bookCollections, setBookCollection,
     bookMetadata, setBookMetadata,
+    deleteBookLocally,
   } = useStore();
 
   const [chapters, setChapters] = useState<DriveFile[]>([]);
@@ -39,6 +40,8 @@ export default function Book() {
   const [tagInput, setTagInput] = useState('');
   const [showReview, setShowReview] = useState(false);
   const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const bookId = id || '';
   const bookName = location.state?.bookName || decodeURIComponent(id || 'Book Chapters');
@@ -122,6 +125,19 @@ export default function Book() {
     // AutoSync will handle this
   };
 
+  const handleDeleteBook = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteBook(token, bookName);
+      deleteBookLocally(bookId);
+      deleteBookLocally(bookName);
+      navigate('/bookshelf?tab=library', { replace: true });
+    } catch (err: any) {
+      alert(err.message || 'Xóa truyện thất bại. Vui lòng thử lại.');
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#FBF6EC] text-[#3D2B1F] pb-24 font-sans">
       {/* Sticky Header */}
@@ -164,6 +180,15 @@ export default function Book() {
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Thêm chương</span>
+            </button>
+
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              title="Xóa bộ truyện này"
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200/60 rounded-full transition-all shadow-chip cursor-pointer shrink-0"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Xóa truyện</span>
             </button>
           </div>
         </div>
@@ -321,7 +346,15 @@ export default function Book() {
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-3 border-t border-[#EFE6D8] flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Xóa bộ truyện này
+              </button>
+
               <button
                 onClick={() => {
                   // AutoSync will handle this
@@ -617,6 +650,49 @@ export default function Book() {
           loadChapters();
         }}
       />
+
+      {/* Delete Novel Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#FBF6EC] rounded-[28px] max-w-md w-full p-6 sm:p-7 shadow-2xl border border-[#EFE6D8] space-y-4 animate-scale-up">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto text-red-600 shadow-chip">
+              <Trash2 className="w-7 h-7" />
+            </div>
+
+            <div className="text-center space-y-2">
+              <h3 className="font-display font-bold text-xl text-[#3D2B1F]">
+                Xác nhận xóa bộ truyện?
+              </h3>
+              <p className="text-sm text-[#6B5645]">
+                Bạn có chắc chắn muốn xóa bộ truyện <span className="font-bold text-[#3D2B1F]">"{currentMeta.customName || bookName}"</span> không?
+              </p>
+              <div className="text-xs text-red-700 font-medium bg-red-50/80 p-3 rounded-2xl border border-red-200/60 leading-relaxed text-left">
+                ⚠️ <span className="font-bold">Lưu ý:</span> Toàn bộ {chapters.length} chương truyện và toàn bộ dữ liệu ghi chú, đánh giá của bộ truyện này sẽ bị xóa vĩnh viễn khỏi hệ thống.
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 py-3 bg-[#F0E7D8] hover:bg-[#E4D9C8] text-[#3D2B1F] font-bold text-xs sm:text-sm rounded-full transition-colors cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteBook}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-full transition-all shadow-chip flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              >
+                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {isDeleting ? 'Đang xóa...' : 'Xóa bộ truyện'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

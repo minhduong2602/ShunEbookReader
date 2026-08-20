@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, BookOpen, Star } from 'lucide-react';
+import { CheckCircle2, BookOpen, Star, Trash2 } from 'lucide-react';
 import { BookShelf } from '../store';
 
 export interface BookCoverCardProps {
@@ -10,6 +10,7 @@ export interface BookCoverCardProps {
   coverImage?: string;
   onClick?: () => void;
   onToggleCompleted?: (e: React.MouseEvent) => void;
+  onDelete?: (e: React.MouseEvent) => void;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   // Phase 2
@@ -48,6 +49,7 @@ export const BookCoverCard: React.FC<BookCoverCardProps> = ({
   coverImage,
   onClick,
   onToggleCompleted,
+  onDelete,
   size = 'md',
   className = '',
   rating = 0,
@@ -86,15 +88,29 @@ export const BookCoverCard: React.FC<BookCoverCardProps> = ({
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/20 text-white backdrop-blur-xs">
               Ebook
             </span>
-            {onToggleCompleted && (
-              <button
-                onClick={onToggleCompleted}
-                title={isCompleted ? 'Bỏ đánh dấu hoàn thành' : 'Đánh dấu hoàn thành'}
-                className="p-1 rounded-full bg-white/90 text-[#3D2B1F] shadow-sm hover:scale-110 active:scale-95 transition-all"
-              >
-                <CheckCircle2 className={`w-4 h-4 ${isCompleted ? 'text-emerald-600 fill-emerald-100' : 'text-gray-400'}`} />
-              </button>
-            )}
+            <div className="flex items-center gap-1">
+              {onDelete && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(e);
+                  }}
+                  title="Xóa bộ truyện"
+                  className="p-1 rounded-full bg-white/90 text-red-500 hover:text-red-700 hover:bg-red-50 shadow-sm hover:scale-110 active:scale-95 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {onToggleCompleted && (
+                <button
+                  onClick={onToggleCompleted}
+                  title={isCompleted ? 'Bỏ đánh dấu hoàn thành' : 'Đánh dấu hoàn thành'}
+                  className="p-1 rounded-full bg-white/90 text-[#3D2B1F] shadow-sm hover:scale-110 active:scale-95 transition-all"
+                >
+                  <CheckCircle2 className={`w-4 h-4 ${isCompleted ? 'text-emerald-600 fill-emerald-100' : 'text-gray-400'}`} />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Book Title Illustration Center */}

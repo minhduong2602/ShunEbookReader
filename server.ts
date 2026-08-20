@@ -426,6 +426,118 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   }
 });
 
+// 4.1 API: Delete Novel (and all its chapters)
+app.delete("/api/books/:bookId", async (req, res) => {
+  try {
+    const bookName = decodeURIComponent(req.params.bookId);
+    if (!bookName) {
+      return res.status(400).json({ error: "Missing bookId" });
+    }
+
+    let deletedFromR2 = false;
+    if (isR2Configured()) {
+      try {
+        const s3 = getS3Client();
+        const prefix = `${bookName}/`;
+        const listCmd = new ListObjectsV2Command({
+          Bucket: BUCKET,
+          Prefix: prefix,
+        });
+        const listData = await s3.send(listCmd);
+        
+        const objectsToDelete = (listData.Contents || []).map(obj => ({ Key: obj.Key }));
+        // Also check if there is an exact match for standalone file (e.g. "novel.txt")
+        objectsToDelete.push({ Key: bookName });
+
+        for (const obj of objectsToDelete) {
+          if (obj.Key) {
+            try {
+              await s3.send(new DeleteObjectCommand({
+                Bucket: BUCKET,
+                Key: obj.Key,
+              }));
+            } catch (delErr) {
+              console.warn(`Failed to delete R2 object ${obj.Key}:`, delErr);
+            }
+          }
+        }
+        deletedFromR2 = true;
+      } catch (r2Err: any) {
+        console.error(`R2 failed to delete book ${bookName}:`, r2Err);
+      }
+    }
+
+    // Local file / folder deletion
+    try {
+      const bookDir = path.join(LOCAL_NOVELS_DIR, bookName);
+      if (fs.existsSync(bookDir)) {
+        const stat = fs.statSync(bookDir);
+        if (stat.isDirectory()) {
+          fs.rmSync(bookDir, { recursive: true, force: true });
+        } else {
+          fs.unlinkSync(bookDir);
+        }
+      }
+      const altPath = path.join(LOCAL_DATA_DIR, bookName);
+      if (fs.existsSync(altPath)) {
+        const stat = fs.statSync(altPath);
+        if (stat.isDirectory()) {
+          fs.rmSync(altPath, { recursive: true, force: true });
+        } else {
+          fs.unlinkSync(altPath);
+        }
+      }
+    } catch (localErr) {
+      console.warn("Failed to delete local book file/dir:", localErr);
+    }
+
+    return res.json({ success: true, message: `Novel "${bookName}" deleted successfully`, deletedFromR2 });
+  } catch (err: any) {
+    console.error("Failed to delete book", err);
+    return res.status(500).json({ error: err.message || "Failed to delete book" });
+  }
+});
+
+// 4.2 API: Delete Chapter
+app.delete("/api/chapters/:id", async (req, res) => {
+  try {
+    const key = decodeURIComponent(atob(req.params.id));
+    if (!key) {
+      return res.status(400).json({ error: "Missing chapter key" });
+    }
+
+    if (isR2Configured()) {
+      try {
+        const s3 = getS3Client();
+        await s3.send(new DeleteObjectCommand({
+          Bucket: BUCKET,
+          Key: key,
+        }));
+      } catch (r2Err) {
+        console.error(`R2 failed to delete chapter ${key}:`, r2Err);
+      }
+    }
+
+    try {
+      const filePath = path.join(LOCAL_DATA_DIR, key);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      const altPath = path.join(LOCAL_NOVELS_DIR, key);
+      if (fs.existsSync(altPath)) {
+        fs.unlinkSync(altPath);
+      }
+    } catch (localErr) {
+      console.warn("Failed to delete local chapter file:", localErr);
+    }
+
+    return res.json({ success: true, message: "Chapter deleted successfully" });
+  } catch (err: any) {
+    console.error("Failed to delete chapter", err);
+    return res.status(500).json({ error: err.message || "Failed to delete chapter" });
+  }
+});
+
 const SYNC_FILES = [
   "sync_preferences.json",
   "sync_progress.json",
